@@ -1,0 +1,33 @@
+log:
+  level: debug
+  disable_sentry: true
+
+db:
+  url: db_url
+
+certificates_issuer:
+  address: contract_addr
+  from_block: 123
+  contracts_list:
+    - first
+    - second
+
+certificates_fabric:
+  address: contract_addr
+  from_block: 123
+  contracts_list:
+    - first
+    - second
+
+infura:
+  key: d098792d2f664c3fa63db5d025fbcb3e
+
+listener:
+  addr: :8000
+
+cop:
+  disabled: true
+  endpoint: "http://..."
+  upstream: "http://..."
+  service_name: CertIntegrator
+  service_port: 80
