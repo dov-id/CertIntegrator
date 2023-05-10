@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/dov-id/CertIntegrator/internal/config"
+	"github.com/dov-id/CertIntegrator/internal/data"
+	"github.com/dov-id/CertIntegrator/internal/data/postgres"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -23,14 +25,17 @@ import (
 //		Deploy, which contains information about the course name and its address
 
 const (
-	serviceName = "listener"
-	infuraLink  = "wss://mainnet.infura.io/ws/v3/"
+	serviceName                  = "listener"
+	issuerContract               = "CertIssuer"
+	fabricContract               = "CertFabric"
+	infuraLink                   = "wss://mainnet.infura.io/ws/v3/"
+	issuerTransferEventSignature = "Transfer(address,address,uint256)"
+	fabricDeployEventSignature   = "Deploy(string,address)"
 )
 
-var logsHandlers = map[string]func(eventLog types.Log) error{
-	crypto.Keccak256Hash([]byte("Transfer(address,address,uint256)")).Hex(): handleIssuerTransferLog,
-	//TODO: set required function signature
-	crypto.Keccak256Hash([]byte("Deploy(string,address)")).Hex(): handleFabricDeployLog,
+var logsHandlers = map[string]func(l *Listener, eventLog types.Log) error{
+	crypto.Keccak256Hash([]byte(issuerTransferEventSignature)).Hex(): (*Listener).handleIssuerTransferLog,
+	crypto.Keccak256Hash([]byte(fabricDeployEventSignature)).Hex():   (*Listener).handleFabricDeployLog,
 }
 
 type IListener interface {
@@ -38,18 +43,22 @@ type IListener interface {
 }
 
 type Listener struct {
-	Address   common.Address
-	InfuraKey string
-	FromBlock *big.Int
+	Address    common.Address
+	InfuraKey  string
+	FromBlock  *big.Int
+	BlocksQ    data.Blocks
+	AddressesQ data.ContractAddresses
 }
 
-func NewListener(infuraKey, address string, fromBlock int64) IListener {
+func NewListener(cfg config.Config, address string, fromBlock int64) IListener {
 	var blockToStart *big.Int = nil
 
 	return &Listener{
-		Address:   common.HexToAddress(address),
-		InfuraKey: infuraKey,
-		FromBlock: blockToStart,
+		Address:    common.HexToAddress(address),
+		InfuraKey:  cfg.Infura().Key,
+		FromBlock:  blockToStart,
+		BlocksQ:    postgres.NewBlocksQ(cfg.DB().Clone()),
+		AddressesQ: postgres.NewContractAddressesQ(cfg.DB().Clone()),
 	}
 }
 
@@ -89,7 +98,7 @@ func (l *Listener) listen(_ context.Context) error {
 		case err = <-subscription.Err():
 			return errors.Wrap(err, "some error with subscription")
 		case vLog := <-logs:
-			if err = handleLogs(vLog); err != nil {
+			if err = l.handleLogs(vLog); err != nil {
 				return errors.Wrap(err, "failed to handle log")
 			}
 		}
@@ -97,9 +106,9 @@ func (l *Listener) listen(_ context.Context) error {
 
 }
 
-func handleLogs(log types.Log) error {
+func (l *Listener) handleLogs(log types.Log) error {
 	if logHandler, ok := logsHandlers[log.Topics[0].Hex()]; ok {
-		err := logHandler(log)
+		err := logHandler(l, log)
 		if err != nil {
 			return errors.Wrap(err, "failed to handle log")
 		}

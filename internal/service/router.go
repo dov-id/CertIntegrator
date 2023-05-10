@@ -33,7 +33,7 @@ func (s *service) startListener(ctx context.Context, cfg config.Config) {
 	s.log.Info("Starting issuer listener")
 
 	listeners.NewListener(
-		cfg.Infura().Key,
+		cfg,
 		cfg.CertificatesIssuer().Address,
 		cfg.CertificatesIssuer().FromBlock,
 	).Run(ctx, cfg)
@@ -41,7 +41,7 @@ func (s *service) startListener(ctx context.Context, cfg config.Config) {
 	s.log.Info("Starting fabric listener")
 
 	listeners.NewListener(
-		cfg.Infura().Key,
+		cfg,
 		cfg.CertificatesFabric().Address,
 		cfg.CertificatesFabric().FromBlock,
 	).Run(ctx, cfg)

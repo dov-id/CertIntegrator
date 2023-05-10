@@ -1,6 +1,7 @@
 -- +migrate Up
 
 create table if not exists contract_addresses (
+    course_name text not null,
     address text not null,
     unique(address)
 );

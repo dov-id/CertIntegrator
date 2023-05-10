@@ -3,8 +3,10 @@ package listeners
 import (
 	"fmt"
 
+	"github.com/dov-id/CertIntegrator/internal/data"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/pkg/errors"
 )
 
 type LogTransfer struct {
@@ -13,7 +15,7 @@ type LogTransfer struct {
 	To   common.Address
 }
 
-func handleIssuerTransferLog(eventLog types.Log) error {
+func (l *Listener) handleIssuerTransferLog(eventLog types.Log) error {
 	var event LogTransfer
 
 	event.From = common.HexToAddress(eventLog.Topics[1].Hex())
@@ -24,8 +26,14 @@ func handleIssuerTransferLog(eventLog types.Log) error {
 		fmt.Printf("From: %s\n", event.From.Hex())
 		fmt.Printf("To: %s\n", event.To.Hex())
 
-		//TODO: save this in database
-		fmt.Printf("Log Block Number: %d\n", eventLog.BlockNumber)
+		err := l.BlocksQ.Upsert(data.Block{
+			ContractName:    issuerContract,
+			LastBlockNumber: int64(eventLog.BlockNumber),
+		})
+		if err != nil {
+			return errors.Wrap(err, "failed to save last handled block")
+		}
+
 		return nil
 	}
 
@@ -33,8 +41,13 @@ func handleIssuerTransferLog(eventLog types.Log) error {
 	fmt.Printf("From: %s\n", event.From.Hex())
 	fmt.Printf("To: %s\n", event.To.Hex())
 
-	//TODO: save this in database
-	fmt.Printf("Log Block Number: %d\n", eventLog.BlockNumber)
+	err := l.BlocksQ.Upsert(data.Block{
+		ContractName:    issuerContract,
+		LastBlockNumber: int64(eventLog.BlockNumber),
+	})
+	if err != nil {
+		return errors.Wrap(err, "failed to save last handled block")
+	}
 
 	return nil
 }
