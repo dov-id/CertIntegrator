@@ -1,7 +1,7 @@
 package listeners
 
 import (
-	"github.com/dov-id/CertIntegrator/internal/data"
+	"github.com/dov-id/CertIntegrator-svc/internal/data"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	sql "github.com/iden3/go-merkletree-sql/db/pgx/v2"

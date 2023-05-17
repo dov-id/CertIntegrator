@@ -12,11 +12,7 @@ help: ## Show help
 .PHONY: help
 
 build: ## Build everything
-	for dir in $(ALL_GO_MOD_DIRS); do \
-		cd "$${dir}"; \
-		echo ">>> Running 'go build' for module: $${dir}"; \
-		go build ./...; \
-	done;
+	go build ./...
 .PHONY: build
 
 ### Tests (inspired by https://github.com/open-telemetry/opentelemetry-go/blob/main/Makefile)
@@ -43,7 +39,6 @@ $(COVERAGE_REPORT_DIR):
 clean-report-dir: $(COVERAGE_REPORT_DIR)
 	test $(COVERAGE_REPORT_DIR) && rm -f $(COVERAGE_REPORT_DIR)/*
 test-coverage: $(COVERAGE_REPORT_DIR) clean-report-dir  ## Test with coverage enabled
-	set -e ; \
 	for dir in $(ALL_GO_MOD_DIRS); do \
 	  echo ">>> Running tests with coverage for module: $${dir}"; \
 	  DIR_ABS=$$(python -c 'import os, sys; print(os.path.realpath(sys.argv[1]))' $${dir}) ; \
@@ -55,23 +50,8 @@ test-coverage: $(COVERAGE_REPORT_DIR) clean-report-dir  ## Test with coverage en
 	done;
 .PHONY: test-coverage clean-report-dir
 
-mod-tidy: ## Check go.mod tidiness
-	set -e ; \
-	for dir in $(ALL_GO_MOD_DIRS); do \
-		cd "$${dir}"; \
-		echo ">>> Running 'go mod tidy' for module: $${dir}"; \
-		go mod tidy -go=1.18 -compat=1.18; \
-	done; \
-	git diff --exit-code;
-.PHONY: mod-tidy
-
 vet: ## Run "go vet"
-	set -e ; \
-	for dir in $(ALL_GO_MOD_DIRS); do \
-		cd "$${dir}"; \
-		echo ">>> Running 'go vet' for module: $${dir}"; \
-		go vet ./...; \
-	done;
+	go vet ./...
 .PHONY: vet
 
 lint: ## Lint (using "golangci-lint")

@@ -15,7 +15,7 @@ var ContractHooks = figure.Hooks{
 			contracts := make([]Contract, 0, len(v))
 
 			for _, rawMap := range v {
-				mapElem, ok := rawMap.(map[string]interface{})
+				mapElem, ok := rawMap.(map[interface{}]interface{})
 				if !ok {
 					return reflect.Value{}, errors.New("failed to cast map element to interface")
 				}

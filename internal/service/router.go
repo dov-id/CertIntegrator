@@ -3,9 +3,9 @@ package service
 import (
 	"context"
 
-	"github.com/dov-id/CertIntegrator/internal/config"
-	"github.com/dov-id/CertIntegrator/internal/service/handlers"
-	"github.com/dov-id/CertIntegrator/internal/service/listeners"
+	"github.com/dov-id/CertIntegrator-svc/internal/config"
+	"github.com/dov-id/CertIntegrator-svc/internal/service/handlers"
+	"github.com/dov-id/CertIntegrator-svc/internal/service/listeners"
 	"github.com/go-chi/chi"
 	"github.com/jackc/pgx/v4"
 	"gitlab.com/distributed_lab/ape"
@@ -24,7 +24,7 @@ func (s *service) router() chi.Router {
 			handlers.CtxLog(s.log),
 		),
 	)
-	r.Route("/integrations/CertIntegrator", func(r chi.Router) {
+	r.Route("/integrations/CertIntegrator-svc", func(r chi.Router) {
 		// configure endpoints here
 	})
 
