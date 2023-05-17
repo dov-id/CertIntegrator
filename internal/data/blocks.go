@@ -7,10 +7,10 @@ type Blocks interface {
 	Delete() error
 	Get() (*Block, error)
 
-	FilterByContractNames(contractNames ...string) Blocks
+	FilterByContractAddress(contractAddresses ...string) Blocks
 }
 
 type Block struct {
-	ContractName    string `json:"contract_name" db:"contract_name" structs:"contract_name"`
+	ContractAddress string `json:"contract_address" db:"contract_address" structs:"contract_address"`
 	LastBlockNumber int64  `json:"last_block_number" db:"last_block_number" structs:"last_block_number"`
 }

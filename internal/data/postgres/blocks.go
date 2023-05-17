@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	blocksTableName          = "blocks"
-	blocksContractNameColumn = blocksTableName + ".contract_name"
+	blocksTableName             = "blocks"
+	blocksContractAddressColumn = blocksTableName + ".contract_address"
 )
 
 type BlockQ struct {
@@ -35,14 +35,11 @@ func (q BlockQ) New() data.Blocks {
 func (q BlockQ) Upsert(block data.Block) error {
 	clauses := structs.Map(block)
 
-	updateStmt, args, err := sq.Update(" ").
-		Set("block", block.LastBlockNumber).
-		ToSql()
-	if err != nil {
-		return err
-	}
+	updateStmt, args := sq.Update(" ").
+		Set("last_block_number", block.LastBlockNumber).
+		MustSql()
 
-	query := sq.Insert(blocksTableName).SetMap(clauses).Suffix("ON CONFLICT (contract_name) DO "+updateStmt, args...)
+	query := sq.Insert(blocksTableName).SetMap(clauses).Suffix("ON CONFLICT (contract_address) DO "+updateStmt, args...)
 
 	return q.db.Exec(query)
 }
@@ -73,11 +70,11 @@ func (q BlockQ) Get() (*data.Block, error) {
 	return &result, err
 }
 
-func (q BlockQ) FilterByContractNames(names ...string) data.Blocks {
-	equalNames := sq.Eq{blocksContractNameColumn: names}
+func (q BlockQ) FilterByContractAddress(contractAddresses ...string) data.Blocks {
+	equalAddresses := sq.Eq{blocksContractAddressColumn: contractAddresses}
 
-	q.selectBuilder = q.selectBuilder.Where(equalNames)
-	q.deleteBuilder = q.deleteBuilder.Where(equalNames)
+	q.selectBuilder = q.selectBuilder.Where(equalAddresses)
+	q.deleteBuilder = q.deleteBuilder.Where(equalAddresses)
 
 	return q
 }

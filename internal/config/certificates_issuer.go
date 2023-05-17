@@ -6,19 +6,22 @@ import (
 	"gitlab.com/distributed_lab/logan/v3/errors"
 )
 
-type CertificatesCfg struct {
-	Address       string   `figure:"address"`
-	FromBlock     int64    `figure:"from_block"`
-	ContractsList []string `figure:"contracts_list"`
+type Contract struct {
+	Address   string `figure:"address"`
+	FromBlock int64  `figure:"from_block"`
 }
 
-func (c *config) CertificatesIssuer() *CertificatesCfg {
-	return c.certificatesFabric.Do(func() interface{} {
-		var cfg CertificatesCfg
+type ContractsCfg struct {
+	List []Contract
+}
+
+func (c *config) CertificatesIssuer() *ContractsCfg {
+	return c.certificatesIssuer.Do(func() interface{} {
+		var cfg ContractsCfg
 
 		err := figure.
 			Out(&cfg).
-			With(figure.BaseHooks).
+			With(figure.BaseHooks, ContractHooks).
 			From(kv.MustGetStringMap(c.getter, "certificates_issuer")).
 			Please()
 
@@ -27,5 +30,5 @@ func (c *config) CertificatesIssuer() *CertificatesCfg {
 		}
 
 		return &cfg
-	}).(*CertificatesCfg)
+	}).(*ContractsCfg)
 }

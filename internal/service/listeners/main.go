@@ -2,7 +2,6 @@ package listeners
 
 import (
 	"context"
-	"fmt"
 	"math/big"
 	"time"
 
@@ -14,6 +13,8 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/jackc/pgx/v4"
+	"gitlab.com/distributed_lab/logan/v3"
 	"gitlab.com/distributed_lab/logan/v3/errors"
 	"gitlab.com/distributed_lab/running"
 )
@@ -25,10 +26,12 @@ import (
 //		Deploy, which contains information about the course name and its address
 
 const (
-	serviceName                  = "listener"
-	issuerContract               = "CertIssuer"
-	fabricContract               = "CertFabric"
-	infuraLink                   = "wss://mainnet.infura.io/ws/v3/"
+	serviceName    = "listener"
+	IssuerContract = "CertIssuer"
+	FabricContract = "CertFabric"
+	ZeroAddress    = "0x0000000000000000000000000000000000000000"
+	//infuraLink                   = "wss://mainnet.infura.io/ws/v3/"
+	infuraLink                   = "wss://goerli.infura.io/ws/v3/"
 	issuerTransferEventSignature = "Transfer(address,address,uint256)"
 	fabricDeployEventSignature   = "Deploy(string,address)"
 )
@@ -39,33 +42,38 @@ var logsHandlers = map[string]func(l *Listener, eventLog types.Log) error{
 }
 
 type IListener interface {
-	Run(ctx context.Context, cfg config.Config)
+	Run(ctx context.Context)
 }
 
 type Listener struct {
+	cfg config.Config
+	ctx context.Context
+	log *logan.Entry
+
+	DBConn     *pgx.Conn
 	Address    common.Address
-	InfuraKey  string
 	FromBlock  *big.Int
 	BlocksQ    data.Blocks
-	AddressesQ data.ContractAddresses
+	AddressesQ data.Contracts
 }
 
-func NewListener(cfg config.Config, address string, fromBlock int64) IListener {
-	var blockToStart *big.Int = nil
-
+func NewListener(cfg config.Config, ctx context.Context, conn *pgx.Conn, address string, fromBlock int64) IListener {
 	return &Listener{
+		cfg:        cfg,
+		ctx:        ctx,
+		log:        cfg.Log().WithField("address", address),
+		DBConn:     conn,
 		Address:    common.HexToAddress(address),
-		InfuraKey:  cfg.Infura().Key,
-		FromBlock:  blockToStart,
+		FromBlock:  big.NewInt(fromBlock),
 		BlocksQ:    postgres.NewBlocksQ(cfg.DB().Clone()),
-		AddressesQ: postgres.NewContractAddressesQ(cfg.DB().Clone()),
+		AddressesQ: postgres.NewContractsQ(cfg.DB().Clone()),
 	}
 }
 
-func (l *Listener) Run(ctx context.Context, cfg config.Config) {
+func (l *Listener) Run(ctx context.Context) {
 	go running.WithBackOff(
 		ctx,
-		cfg.Log(),
+		l.log,
 		serviceName,
 		l.listen,
 		30*time.Second,
@@ -75,12 +83,20 @@ func (l *Listener) Run(ctx context.Context, cfg config.Config) {
 }
 
 func (l *Listener) listen(_ context.Context) error {
-	fmt.Println("start listeners")
-	client, err := ethclient.Dial(infuraLink + l.InfuraKey)
+	l.log.Infof("start listener")
+
+	client, err := ethclient.Dial(l.cfg.Infura().Link + l.cfg.Infura().Key)
 	if err != nil {
 		return errors.Wrap(err, "failed to make dial connect")
 	}
 
+	block, err := l.BlocksQ.FilterByContractAddress(l.Address.Hex()).Get()
+	if err != nil {
+		return errors.Wrap(err, "failed to get block")
+	}
+	if block != nil {
+		l.FromBlock = big.NewInt(block.LastBlockNumber)
+	}
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{l.Address},
 		FromBlock: l.FromBlock,
@@ -88,7 +104,7 @@ func (l *Listener) listen(_ context.Context) error {
 
 	logs := make(chan types.Log)
 
-	subscription, err := client.SubscribeFilterLogs(context.Background(), query, logs)
+	subscription, err := client.SubscribeFilterLogs(l.ctx, query, logs)
 	if err != nil {
 		return errors.Wrap(err, "failed to subscribe to logs")
 	}
@@ -110,7 +126,7 @@ func (l *Listener) handleLogs(log types.Log) error {
 	if logHandler, ok := logsHandlers[log.Topics[0].Hex()]; ok {
 		err := logHandler(l, log)
 		if err != nil {
-			return errors.Wrap(err, "failed to handle log")
+			return err
 		}
 	}
 

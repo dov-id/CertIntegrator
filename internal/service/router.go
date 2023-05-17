@@ -7,7 +7,9 @@ import (
 	"github.com/dov-id/CertIntegrator/internal/service/handlers"
 	"github.com/dov-id/CertIntegrator/internal/service/listeners"
 	"github.com/go-chi/chi"
+	"github.com/jackc/pgx/v4"
 	"gitlab.com/distributed_lab/ape"
+	"gitlab.com/distributed_lab/logan/v3/errors"
 )
 
 func (s *service) router() chi.Router {
@@ -30,19 +32,32 @@ func (s *service) router() chi.Router {
 }
 
 func (s *service) startListener(ctx context.Context, cfg config.Config) {
-	s.log.Info("Starting issuer listener")
+	conn, err := pgx.Connect(ctx, cfg.DBConfig().URL)
+	if err != nil {
+		panic(errors.Wrap(err, "failed to connect to db"))
+	}
 
-	listeners.NewListener(
-		cfg,
-		cfg.CertificatesIssuer().Address,
-		cfg.CertificatesIssuer().FromBlock,
-	).Run(ctx, cfg)
+	s.log.Info("Starting fabrics listener")
 
-	s.log.Info("Starting fabric listener")
+	for _, contract := range cfg.CertificatesFabric().List {
+		listeners.NewListener(
+			cfg,
+			ctx,
+			conn,
+			contract.Address,
+			contract.FromBlock,
+		).Run(ctx)
+	}
 
-	listeners.NewListener(
-		cfg,
-		cfg.CertificatesFabric().Address,
-		cfg.CertificatesFabric().FromBlock,
-	).Run(ctx, cfg)
+	s.log.Info("Starting issuers listener")
+
+	for _, contract := range cfg.CertificatesIssuer().List {
+		listeners.NewListener(
+			cfg,
+			ctx,
+			conn,
+			contract.Address,
+			contract.FromBlock,
+		).Run(ctx)
+	}
 }

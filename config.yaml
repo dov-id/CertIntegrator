@@ -3,24 +3,16 @@ log:
   disable_sentry: true
 
 db:
-  url: db_url
+  url: postgres://CertIntegrator:CertIntegrator@localhost:5495/CertIntegrator?sslmode=disable
 
 certificates_issuer:
-  address: contract_addr
-  from_block: 123
-  contracts_list:
-    - first
-    - second
+  list:
+    - address: 0xa396BB2ad09933EaE80C9b0C256FfaBb75b8Df1E
+      from_block: 9015398
 
 certificates_fabric:
-  address: contract_addr
-  from_block: 123
-  contracts_list:
-    - first
-    - second
-
-infura:
-  key: d098792d2f664c3fa63db5d025fbcb3e
+  - address: contract_addr
+    from_block: 123
 
 listener:
   addr: :8000
