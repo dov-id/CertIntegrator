@@ -4,10 +4,10 @@ project: 'backend'
 image: builder
 from: golang:1.19-alpine
 docker:
-  WORKDIR: /go/src/github.com/dov-id/CertIntegrator-svc
+  WORKDIR: /go/src/github.com/dov-id/cert-integrator-svc
 git:
   - add: /
-    to: /go/src/github.com/dov-id/CertIntegrator-svc
+    to: /go/src/github.com/dov-id/cert-integrator-svc
     stageDependencies:
       setup:
         - "**/*"
@@ -16,7 +16,7 @@ shell:
     - export CGO_ENABLED=0
     - export GO111MODULE=off
     - export GOOS=linux
-    - go build  -o /usr/local/bin/CertIntegrator-svc  /go/src/github.com/dov-id/CertIntegrator-svc
+    - go build  -o /usr/local/bin/cert-integrator-svc  /go/src/github.com/dov-id/cert-integrator-svc
 
 ---
 image: service
@@ -28,6 +28,6 @@ shell:
     - apk add --no-cache ca-certificates
 import:
   - image: builder
-    add: /usr/local/bin/CertIntegrator-svc
-    to: /usr/local/bin/CertIntegrator-svc
+    add: /usr/local/bin/cert-integrator-svc
+    to: /usr/local/bin/cert-integrator-svc
     after: setup

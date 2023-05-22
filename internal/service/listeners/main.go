@@ -5,9 +5,9 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/dov-id/CertIntegrator-svc/internal/config"
-	"github.com/dov-id/CertIntegrator-svc/internal/data"
-	"github.com/dov-id/CertIntegrator-svc/internal/data/postgres"
+	"github.com/dov-id/cert-integrator-svc/internal/config"
+	"github.com/dov-id/cert-integrator-svc/internal/data"
+	"github.com/dov-id/cert-integrator-svc/internal/data/postgres"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"

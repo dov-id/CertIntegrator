@@ -3,16 +3,21 @@ log:
   disable_sentry: true
 
 db:
-  url: postgres://CertIntegrator:CertIntegrator@localhost:5495/CertIntegrator?sslmode=disable
+  url: db_url
 
 certificates_issuer:
   list:
-    - address: 0xa396BB2ad09933EaE80C9b0C256FfaBb75b8Df1E
-      from_block: 9015398
+    - address: contract_address
+      from_block: block_number_to_listen_from
 
 certificates_fabric:
-  - address: contract_addr
-    from_block: 123
+  list:
+    - address: contract_address
+      from_block: block_number_to_listen_from
+
+infura:
+  key: infura_api_key
+  link: infura_link
 
 listener:
   addr: :8000
@@ -21,5 +26,5 @@ cop:
   disabled: true
   endpoint: "http://..."
   upstream: "http://..."
-  service_name: CertIntegrator-svc
+  service_name: cert-integrator-svc
   service_port: 80

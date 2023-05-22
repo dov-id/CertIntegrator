@@ -1,4 +1,4 @@
-module github.com/dov-id/CertIntegrator-svc
+module github.com/dov-id/cert-integrator-svc
 
 go 1.19
 
