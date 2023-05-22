@@ -1,45 +1,41 @@
 package service
 
 import (
-	"net"
-	"net/http"
+	"context"
+	"sync"
 
 	"github.com/dov-id/cert-integrator-svc/internal/config"
-	"gitlab.com/distributed_lab/kit/copus/types"
-	"gitlab.com/distributed_lab/logan/v3"
-	"gitlab.com/distributed_lab/logan/v3/errors"
+	"github.com/dov-id/cert-integrator-svc/internal/service/api"
+	"github.com/dov-id/cert-integrator-svc/internal/service/indexer"
 )
 
-type service struct {
-	log      *logan.Entry
-	copus    types.Copus
-	listener net.Listener
+type Runner = func(config config.Config, context context.Context)
 
-	cfg config.Config
-}
-
-func (s *service) run() error {
-	s.log.Info("Service started")
-	r := s.router()
-
-	if err := s.copus.RegisterChi(r); err != nil {
-		return errors.Wrap(err, "cop failed")
-	}
-
-	return http.Serve(s.listener, r)
-}
-
-func newService(cfg config.Config) *service {
-	return &service{
-		log:      cfg.Log(),
-		copus:    cfg.Copus(),
-		listener: cfg.Listener(),
-		cfg:      cfg,
-	}
+var availableServices = map[string]Runner{
+	"api":     api.Run,
+	"indexer": indexer.Run,
 }
 
 func Run(cfg config.Config) {
-	if err := newService(cfg).run(); err != nil {
-		panic(err)
+	logger := cfg.Log().WithField("service", "main")
+	ctx := context.Background()
+	wg := new(sync.WaitGroup)
+
+	logger.Debugf("Starting all available services")
+
+	for serviceName, service := range availableServices {
+		wg.Add(1)
+
+		go func(name string, runner Runner) {
+			defer wg.Done()
+
+			runner(cfg, ctx)
+
+		}(serviceName, service)
+
+		logger.WithField("service", serviceName).Debugf("Service started")
 	}
+
+	wg.Wait()
+
 }

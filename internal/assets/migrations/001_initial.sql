@@ -4,18 +4,11 @@ create table if not exists contracts (
     id bigserial primary key,
     name text not null,
     address text not null,
+    block bigint not null,
     unique(address)
 );
 
 create index contracts_address_idx on contracts(address);
-
-create table if not exists blocks (
-    contract_address text not null,
-    last_block_number bigint not null,
-
-    unique(contract_address),
-    foreign key (contract_address) references contracts(address) on delete cascade
-);
 
 create table if not exists mt_nodes (
     mt_id bigint,
@@ -40,6 +33,5 @@ create table if not exists mt_roots (
 
 drop table if exists mt_roots;
 drop table if exists mt_nodes;
-drop table if exists blocks;
 drop index if exists contracts_address_idx;
 drop table if exists contracts;

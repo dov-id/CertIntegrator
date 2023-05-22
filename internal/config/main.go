@@ -14,7 +14,6 @@ type Config interface {
 	types.Copuser
 	comfig.Listenerer
 
-	DBConfig() *DBCfg
 	Infura() *InfuraCfg
 	CertificatesIssuer() *ContractsCfg
 	CertificatesFabric() *ContractsCfg
@@ -27,7 +26,6 @@ type config struct {
 	comfig.Listenerer
 	getter kv.Getter
 
-	db                 comfig.Once
 	infura             comfig.Once
 	certificatesIssuer comfig.Once
 	certificatesFabric comfig.Once
