@@ -20,6 +20,24 @@ const getRootStmt = `SELECT mt_id, key, created_at, deleted_at FROM mt_roots WHE
 
 const getKeyStmt = `SELECT mt_id, key, type, child_l, child_r, entry, created_at, deleted_at FROM mt_nodes WHERE mt_id = $1 AND key = $2`
 
+const deleteRootStmt = `DELETE FROM mt_roots WHERE mt_id = $1`
+
+const deleteNodesStmt = `DELETE FROM mt_nodes WHERE mt_id = $1`
+
+// DeleteMTree deletes merkle tree info from storage by current id
+func (s *Storage) DeleteMTree(ctx context.Context) error {
+	err := s.db.ExecRaw(deleteRootStmt, s.mtId)
+	if err != nil {
+		return err
+	}
+	err = s.db.ExecRaw(deleteNodesStmt, s.mtId)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // Storage implements the db.Storage interface
 type Storage struct {
 	db             *pgdb.DB
