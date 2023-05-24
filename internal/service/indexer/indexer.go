@@ -65,7 +65,7 @@ func (i *Indexer) Run(ctx context.Context) {
 func (i *Indexer) listen(_ context.Context) error {
 	i.log.WithField("addresses", i.Addresses).Debugf("start listener")
 
-	client, err := ethclient.Dial(i.cfg.Infura().Link + i.cfg.Infura().Key)
+	client, err := ethclient.Dial(i.cfg.Infura().Goerli + i.cfg.Infura().Key)
 	if err != nil {
 		return errors.Wrap(err, "failed to make dial connect")
 	}

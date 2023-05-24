@@ -7,8 +7,10 @@ import (
 )
 
 type InfuraCfg struct {
-	Key  string `fig:"key,required"`
-	Link string `fig:"link,required"`
+	Key     string `fig:"key,required"`
+	Goerli  string `fig:"goerli,required"`
+	Sepolia string `fig:"sepolia,required"`
+	Polygon string `fig:"polygon,required"`
 }
 
 func (c *config) Infura() *InfuraCfg {

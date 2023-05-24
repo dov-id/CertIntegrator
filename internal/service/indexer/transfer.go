@@ -1,12 +1,18 @@
 package indexer
 
 import (
+	"context"
+	"crypto/ecdsa"
+	"log"
 	"math/big"
 
 	"github.com/dov-id/cert-integrator-svc/contracts"
 	"github.com/dov-id/cert-integrator-svc/internal/data"
 	"github.com/dov-id/cert-integrator-svc/internal/data/postgres"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/iden3/go-merkletree-sql/v2"
 	"gitlab.com/distributed_lab/logan/v3/errors"
@@ -90,6 +96,11 @@ func (i *Indexer) handleTransfer(mTree *merkletree.MerkleTree, event *contracts.
 		return errors.Wrap(err, "failed to save last handled block")
 	}
 
+	err = i.publish(IssuerContract, mTree.Root())
+	if err != nil {
+		return errors.Wrap(err, "failed to publish")
+	}
+
 	i.log.WithField("address", event.Raw.Address.Hex()).Debugf("finish handling transfer event")
 	return nil
 }
@@ -120,6 +131,11 @@ func (i *Indexer) handleMint(mTree *merkletree.MerkleTree, event *contracts.Issu
 	})
 	if err != nil {
 		return errors.Wrap(err, "failed to update last handled block")
+	}
+
+	err = i.publish(IssuerContract, mTree.Root())
+	if err != nil {
+		return errors.Wrap(err, "failed to publish")
 	}
 
 	i.log.WithField("address", event.Raw.Address.Hex()).Debugf("finish handling mint event")
@@ -162,4 +178,93 @@ func (i *Indexer) completelyDeleteKey(mTree *merkletree.MerkleTree, event *contr
 	}
 
 	return nil
+}
+
+func (i *Indexer) publish(name string, root *merkletree.Hash) error {
+	client, err := ethclient.Dial(i.cfg.Infura().Sepolia + i.cfg.Infura().Key)
+	if err != nil {
+		return errors.Wrap(err, "failed to make dial connect sepolia")
+	}
+	err = i.sendUpdates(client, name, root)
+	if err != nil {
+		return errors.Wrap(err, "failed to publish in sepolia")
+	}
+
+	client, err = ethclient.Dial(i.cfg.Infura().Polygon + i.cfg.Infura().Key)
+	if err != nil {
+		return errors.Wrap(err, "failed to make dial connect polygon")
+	}
+	err = i.sendUpdates(client, name, root)
+	if err != nil {
+		return errors.Wrap(err, "failed to publish in polygon")
+	}
+
+	//TODO: publish to Q Testnet
+
+	return nil
+}
+
+func (i *Indexer) sendUpdates(client *ethclient.Client, name string, root *merkletree.Hash) error {
+	auth, err := i.getAuth(client)
+	if err != nil {
+		return errors.Wrap(err, "failed to get auth options")
+	}
+
+	var course [32]byte
+	copy(course[:], name)
+
+	certIntegrator, err := contracts.NewCertIntegratorContract(common.HexToAddress(i.cfg.CertificatesIntegrator().Ethereum), client)
+	if err != nil {
+		return errors.Wrap(err, "failed to create new cert integrator contract")
+	}
+
+	_, err = certIntegrator.UpdateCourseState(auth, [][32]byte{course}, [][32]byte{*root})
+	if err != nil {
+		return errors.Wrap(err, "failed to update course state")
+	}
+
+	return nil
+}
+
+func (i *Indexer) getAuth(client *ethclient.Client) (*bind.TransactOpts, error) {
+	chainID, err := client.ChainID(i.ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get chain id")
+	}
+
+	privateKey, fromAddress, err := i.getKeys()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get keys")
+	}
+
+	auth, err := bind.NewKeyedTransactorWithChainID(privateKey, chainID)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create transaction signer")
+	}
+
+	nonce, err := client.PendingNonceAt(context.Background(), fromAddress)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get nonce")
+	}
+
+	auth.Nonce = big.NewInt(int64(nonce))
+
+	return auth, nil
+}
+
+func (i *Indexer) getKeys() (*ecdsa.PrivateKey, common.Address, error) {
+	privateKey, err := crypto.HexToECDSA(i.cfg.Metamask().PrivateKey)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	publicKey := privateKey.Public()
+	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
+	if !ok {
+		return nil, common.Address{}, errors.New("failed to cast public key to ECDSA")
+	}
+
+	fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
+
+	return privateKey, fromAddress, nil
 }
