@@ -12,7 +12,7 @@ import (
 const (
 	contractsTableName     = "contracts"
 	contractsAddressColumn = contractsTableName + ".address"
-	contractsBlockColumn   = contractsTableName + ".block"
+	contractsTypeColumn    = contractsTableName + ".type"
 )
 
 type ContractsQ struct {
@@ -90,6 +90,16 @@ func (r ContractsQ) FilterByAddresses(addresses ...string) data.Contracts {
 	r.selectBuilder = r.selectBuilder.Where(equalAddresses)
 	r.updateBuilder = r.updateBuilder.Where(equalAddresses)
 	r.deleteBuilder = r.deleteBuilder.Where(equalAddresses)
+
+	return r
+}
+
+func (r ContractsQ) FilterByTypes(types ...data.ContractType) data.Contracts {
+	equalTypes := sq.Eq{contractsTypeColumn: types}
+
+	r.selectBuilder = r.selectBuilder.Where(equalTypes)
+	r.updateBuilder = r.updateBuilder.Where(equalTypes)
+	r.deleteBuilder = r.deleteBuilder.Where(equalTypes)
 
 	return r
 }

@@ -21,7 +21,7 @@ import (
 func (i *Indexer) handleIssuerTransferLog(eventLog types.Log, client *ethclient.Client) error {
 	i.log.WithField("address", eventLog.Address.Hex()).Debugf("start handling transfer event")
 
-	issuer, err := contracts.NewIssuer(eventLog.Address, client)
+	issuer, err := contracts.NewTokenContract(eventLog.Address, client)
 	if err != nil {
 		return errors.Wrap(err, "failed to create new issuer instance")
 	}
@@ -31,7 +31,7 @@ func (i *Indexer) handleIssuerTransferLog(eventLog types.Log, client *ethclient.
 		return errors.Wrap(err, "failed to parse transfer event data")
 	}
 
-	contract, err := i.ContractsQ.FilterByAddresses(eventLog.Address.Hex()).Get()
+	contract, err := i.ContractsQ.FilterByAddresses(event.Raw.Address.Hex()).Get()
 	if err != nil {
 		return errors.Wrap(err, "failed to get contract from database")
 	}
@@ -39,7 +39,8 @@ func (i *Indexer) handleIssuerTransferLog(eventLog types.Log, client *ethclient.
 	if contract == nil {
 		contract, err = i.ContractsQ.Insert(data.Contract{
 			Name:    IssuerContract,
-			Address: eventLog.Address.Hex(),
+			Address: event.Raw.Address.Hex(),
+			Type:    data.ISSUER,
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to save new contract")
@@ -54,21 +55,22 @@ func (i *Indexer) handleIssuerTransferLog(eventLog types.Log, client *ethclient.
 	}
 
 	if event.From.Hex() == ZeroAddress {
-		err = i.handleMint(mTree, event, int64(eventLog.BlockNumber))
+		err = i.handleMint(mTree, event, int64(event.Raw.BlockNumber))
 		if err != nil {
 			return errors.Wrap(err, "failed to handle mint event")
 		}
 		return nil
 	}
 
-	err = i.handleTransfer(mTree, event, int64(eventLog.BlockNumber), treeStorage)
+	err = i.handleTransfer(mTree, event, int64(event.Raw.BlockNumber), treeStorage)
 	if err != nil {
 		return errors.Wrap(err, "failed to handle transfer event")
 	}
+
 	return nil
 }
 
-func (i *Indexer) handleTransfer(mTree *merkletree.MerkleTree, event *contracts.IssuerTransfer, blockNumber int64, treeStorage *postgres.Storage) error {
+func (i *Indexer) handleTransfer(mTree *merkletree.MerkleTree, event *contracts.TokenContractTransfer, blockNumber int64, treeStorage *postgres.Storage) error {
 	receiver := event.To.Big()
 
 	_, leafValue, _, err := mTree.Get(i.ctx, receiver)
@@ -105,7 +107,7 @@ func (i *Indexer) handleTransfer(mTree *merkletree.MerkleTree, event *contracts.
 	return nil
 }
 
-func (i *Indexer) handleMint(mTree *merkletree.MerkleTree, event *contracts.IssuerTransfer, blockNumber int64) error {
+func (i *Indexer) handleMint(mTree *merkletree.MerkleTree, event *contracts.TokenContractTransfer, blockNumber int64) error {
 	receiver := event.To.Big()
 
 	_, leafValue, _, err := mTree.Get(i.ctx, receiver)
@@ -142,7 +144,7 @@ func (i *Indexer) handleMint(mTree *merkletree.MerkleTree, event *contracts.Issu
 	return nil
 }
 
-func (i *Indexer) completelyDeleteKey(mTree *merkletree.MerkleTree, event *contracts.IssuerTransfer, treeStorage *postgres.Storage) error {
+func (i *Indexer) completelyDeleteKey(mTree *merkletree.MerkleTree, event *contracts.TokenContractTransfer, treeStorage *postgres.Storage) error {
 	err := mTree.Delete(i.ctx, event.To.Big())
 	if err != nil {
 		return errors.Wrap(err, "failed to delete address from merkle tree")
@@ -227,7 +229,7 @@ func (i *Indexer) sendUpdates(client *ethclient.Client, name string, root *merkl
 }
 
 func (i *Indexer) getAuth(client *ethclient.Client) (*bind.TransactOpts, error) {
-	chainID, err := client.ChainID(i.ctx)
+	chainID, err := client.ChainID(context.Background())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get chain id")
 	}

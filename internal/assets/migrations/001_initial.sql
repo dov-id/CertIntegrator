@@ -1,10 +1,13 @@
 -- +migrate Up
 
+create type contracts_type_enum as enum ('fabric', 'issuer');
+
 create table if not exists contracts (
     id bigserial primary key,
     name text not null,
     address text not null,
     block bigint not null,
+    type contracts_type_enum not null,
     unique(address)
 );
 
@@ -35,3 +38,4 @@ drop table if exists mt_roots;
 drop table if exists mt_nodes;
 drop index if exists contracts_address_idx;
 drop table if exists contracts;
+drop type if exists contracts_type_enum;

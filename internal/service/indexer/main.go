@@ -29,7 +29,7 @@ type Indexer struct {
 
 func Run(cfg config.Config, ctx context.Context) {
 	cancelCtx, cancelFn := context.WithCancel(ctx)
-	err := updateContractsDB(postgres.NewContractsQ(cfg.DB()), cfg.CertificatesIssuer().List, IssuerContract)
+	err := updateContractsDB(postgres.NewContractsQ(cfg.DB()), cfg.CertificatesIssuer().List, IssuerContract, data.ISSUER)
 	if err != nil {
 		panic(err)
 	}
@@ -42,7 +42,7 @@ func Run(cfg config.Config, ctx context.Context) {
 		nil,
 	).Run(ctx)
 
-	err = updateContractsDB(postgres.NewContractsQ(cfg.DB()), cfg.CertificatesFabric().List, FabricContract)
+	err = updateContractsDB(postgres.NewContractsQ(cfg.DB()), cfg.CertificatesFabric().List, FabricContract, data.FABRIC)
 	if err != nil {
 		panic(err)
 	}
@@ -56,7 +56,7 @@ func Run(cfg config.Config, ctx context.Context) {
 	).Run(ctx)
 }
 
-func updateContractsDB(contractsQ data.Contracts, list []config.Contract, name string) error {
+func updateContractsDB(contractsQ data.Contracts, list []config.Contract, name string, types data.ContractType) error {
 	for i := range list {
 		contract, err := contractsQ.FilterByAddresses(list[i].Address).Get()
 		if err != nil {
@@ -71,6 +71,7 @@ func updateContractsDB(contractsQ data.Contracts, list []config.Contract, name s
 			Name:    name,
 			Address: list[i].Address,
 			Block:   list[i].FromBlock,
+			Type:    types,
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to save new contract")
