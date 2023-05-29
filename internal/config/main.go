@@ -15,8 +15,10 @@ type Config interface {
 	comfig.Listenerer
 
 	Infura() *InfuraCfg
+	Metamask() *MetamaskCfg
 	CertificatesIssuer() *ContractsCfg
 	CertificatesFabric() *ContractsCfg
+	CertificatesIntegrator() *CertificatesIntegratorCfg
 }
 
 type config struct {
@@ -26,9 +28,11 @@ type config struct {
 	comfig.Listenerer
 	getter kv.Getter
 
-	infura             comfig.Once
-	certificatesIssuer comfig.Once
-	certificatesFabric comfig.Once
+	infura                 comfig.Once
+	metamask               comfig.Once
+	certificatesIssuer     comfig.Once
+	certificatesFabric     comfig.Once
+	certificatesIntegrator comfig.Once
 }
 
 func New(getter kv.Getter) Config {

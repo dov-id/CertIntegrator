@@ -18,19 +18,13 @@ import (
 	"gitlab.com/distributed_lab/running"
 )
 
-//CertIssuer - ERC-721 events:
-//		Mint (Transfer from 0x0 address to someone), which contains information about for whom NFT is minted
-//		Transfer, which contains information about from who and to whom NFT is transferred
-//CertFabric - common fabric contract events:
-//		Deploy, which contains information about the course name and its address
-
 const (
-	serviceName                  = "listener"
+	serviceName                  = "indexer"
 	IssuerContract               = "CertIssuer"
 	FabricContract               = "CertFabric"
 	ZeroAddress                  = "0x0000000000000000000000000000000000000000"
 	issuerTransferEventSignature = "Transfer(address,address,uint256)"
-	fabricDeployEventSignature   = "Deploy(string,address)"
+	fabricDeployEventSignature   = "TokenContractDeployed(address,(uint256,string,string))"
 )
 
 var logsHandlers = map[string]func(i *Indexer, eventLog types.Log, client *ethclient.Client) error{
@@ -65,7 +59,7 @@ func (i *Indexer) Run(ctx context.Context) {
 func (i *Indexer) listen(_ context.Context) error {
 	i.log.WithField("addresses", i.Addresses).Debugf("start listener")
 
-	client, err := ethclient.Dial(i.cfg.Infura().Link + i.cfg.Infura().Key)
+	client, err := ethclient.Dial(i.cfg.Infura().Sepolia + i.cfg.Infura().Key)
 	if err != nil {
 		return errors.Wrap(err, "failed to make dial connect")
 	}
@@ -75,37 +69,14 @@ func (i *Indexer) listen(_ context.Context) error {
 		return errors.Wrap(err, "failed to get starting block")
 	}
 
-	query := ethereum.FilterQuery{
-		Addresses: helpers.ConvertStringToAddresses(i.Addresses),
-		FromBlock: block,
-	}
-
-	logs := make(chan types.Log)
-
-	subscription, err := client.SubscribeFilterLogs(i.ctx, query, logs)
+	err = i.processPastEvents(block, client)
 	if err != nil {
-		return errors.Wrap(err, "failed to subscribe to logs")
+		return errors.Wrap(err, "failed to process past events")
 	}
 
-	for {
-		select {
-		case err = <-subscription.Err():
-			return errors.Wrap(err, "some error with subscription")
-		case vLog := <-logs:
-			if err = i.handleLogs(vLog, client); err != nil {
-				return errors.Wrap(err, "failed to handle log")
-			}
-		}
-	}
-
-}
-
-func (i *Indexer) handleLogs(log types.Log, client *ethclient.Client) error {
-	if logHandler, ok := logsHandlers[log.Topics[0].Hex()]; ok {
-		err := logHandler(i, log, client)
-		if err != nil {
-			return err
-		}
+	err = i.subscribeAndProcessNewEvents(client)
+	if err != nil {
+		return errors.Wrap(err, "failed to subscribe and process events:")
 	}
 
 	return nil
@@ -121,7 +92,71 @@ func getBlockToStartFrom(contractsQ data.Contracts, addresses []string, blocks [
 		blocks = append(blocks, contracts[i].Block)
 	}
 
-	sort.Slice(blocks, func(i, j int) bool { return blocks[i] < blocks[j] })
+	sort.Slice(blocks, func(i, j int) bool { return blocks[i] > blocks[j] })
 
 	return big.NewInt(blocks[0]), nil
+}
+
+func (i *Indexer) handleLogs(log types.Log, client *ethclient.Client) error {
+	if logHandler, ok := logsHandlers[log.Topics[0].Hex()]; ok {
+		err := logHandler(i, log, client)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (i *Indexer) processPastEvents(block *big.Int, client *ethclient.Client) error {
+	i.log.WithFields(map[string]interface{}{"block": block.String(), "addresses": i.Addresses}).Debugf("start processing past events")
+
+	filterQuery := ethereum.FilterQuery{
+		Addresses: helpers.ConvertStringToAddresses(i.Addresses),
+		FromBlock: block,
+		ToBlock:   nil,
+	}
+
+	oldLogs, err := client.FilterLogs(context.Background(), filterQuery)
+	if err != nil {
+		return errors.Wrap(err, "failed to filter logs")
+	}
+
+	for _, log := range oldLogs {
+		i.log.WithFields(map[string]interface{}{"block": log.BlockNumber, "address": log.Address.Hex()}).Debugf("processing past event")
+
+		err = i.handleLogs(log, client)
+		if err != nil {
+			return errors.Wrap(err, "failed to handle log")
+		}
+
+		block = big.NewInt(int64(log.BlockNumber))
+	}
+
+	i.log.WithFields(map[string]interface{}{"block": block.String(), "addresses": i.Addresses}).Debugf("finish processing past events")
+	return nil
+}
+
+func (i *Indexer) subscribeAndProcessNewEvents(client *ethclient.Client) error {
+	query := ethereum.FilterQuery{
+		Addresses: helpers.ConvertStringToAddresses(i.Addresses),
+	}
+
+	logs := make(chan types.Log)
+
+	subscription, err := client.SubscribeFilterLogs(context.Background(), query, logs)
+	if err != nil {
+		return errors.Wrap(err, "failed to subscribe to logs")
+	}
+
+	for {
+		select {
+		case err = <-subscription.Err():
+			return errors.Wrap(err, "some error with subscription")
+		case vLog := <-logs:
+			if err = i.handleLogs(vLog, client); err != nil {
+				return errors.Wrap(err, "failed to handle log")
+			}
+		}
+	}
 }
