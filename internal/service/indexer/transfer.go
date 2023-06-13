@@ -3,14 +3,15 @@ package indexer
 import (
 	"context"
 	"crypto/ecdsa"
-	"log"
 	"math/big"
+	"sync"
 
 	"github.com/dov-id/cert-integrator-svc/contracts"
 	"github.com/dov-id/cert-integrator-svc/internal/data"
 	"github.com/dov-id/cert-integrator-svc/internal/data/postgres"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -18,7 +19,7 @@ import (
 	"gitlab.com/distributed_lab/logan/v3/errors"
 )
 
-func (i *Indexer) handleIssuerTransferLog(eventLog types.Log, client *ethclient.Client) error {
+func (i *indexer) handleIssuerTransferLog(eventLog types.Log, client *ethclient.Client) error {
 	i.log.WithField("address", eventLog.Address.Hex()).Debugf("start handling transfer event")
 
 	issuer, err := contracts.NewTokenContract(eventLog.Address, client)
@@ -47,9 +48,9 @@ func (i *Indexer) handleIssuerTransferLog(eventLog types.Log, client *ethclient.
 		}
 	}
 
-	treeStorage := postgres.NewPGDBStorage(i.cfg.DB(), contract.Id)
+	treeStorage := postgres.NewStorage(i.cfg.DB(), contract.Id)
 
-	mTree, err := merkletree.NewMerkleTree(i.ctx, treeStorage, 100)
+	mTree, err := merkletree.NewMerkleTree(i.ctx, treeStorage, data.MaxMTreeLevel)
 	if err != nil {
 		return errors.Wrap(err, "failed to create merkle tree")
 	}
@@ -70,7 +71,7 @@ func (i *Indexer) handleIssuerTransferLog(eventLog types.Log, client *ethclient.
 	return nil
 }
 
-func (i *Indexer) handleTransfer(mTree *merkletree.MerkleTree, event *contracts.TokenContractTransfer, blockNumber int64, treeStorage *postgres.Storage) error {
+func (i *indexer) handleTransfer(mTree *merkletree.MerkleTree, event *contracts.TokenContractTransfer, blockNumber int64, treeStorage *postgres.Storage) error {
 	receiver := event.To.Big()
 
 	_, leafValue, _, err := mTree.Get(i.ctx, receiver)
@@ -82,32 +83,37 @@ func (i *Indexer) handleTransfer(mTree *merkletree.MerkleTree, event *contracts.
 	if value < 1 {
 		err = i.completelyDeleteKey(mTree, event, treeStorage)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to fully delete key")
 		}
-	} else {
-		_, err = mTree.Update(i.ctx, receiver, big.NewInt(value))
-		if err != nil {
-			return errors.Wrap(err, "failed to update leaf in merkle tree")
-		}
+
+		return i.updateContractsStates(event, blockNumber, mTree.Root(), "finish handling transfer event")
+	}
+	_, err = mTree.Update(i.ctx, receiver, big.NewInt(value))
+	if err != nil {
+		return errors.Wrap(err, "failed to update leaf in merkle tree")
 	}
 
-	err = i.ContractsQ.FilterByAddresses(event.Raw.Address.Hex()).Update(data.ContractToUpdate{
+	return i.updateContractsStates(event, blockNumber, mTree.Root(), "finish handling transfer event")
+}
+
+func (i *indexer) updateContractsStates(event *contracts.TokenContractTransfer, blockNumber int64, root *merkletree.Hash, msg string) error {
+	err := i.ContractsQ.FilterByAddresses(event.Raw.Address.Hex()).Update(data.ContractToUpdate{
 		Block: &blockNumber,
 	})
 	if err != nil {
-		return errors.Wrap(err, "failed to save last handled block")
+		return errors.Wrap(err, "failed to update last handled block")
 	}
 
-	err = i.publish(IssuerContract, mTree.Root())
+	err = i.publish(event.To.Hex(), root)
 	if err != nil {
 		return errors.Wrap(err, "failed to publish")
 	}
 
-	i.log.WithField("address", event.Raw.Address.Hex()).Debugf("finish handling transfer event")
+	i.log.WithField("address", event.Raw.Address.Hex()).Debugf(msg)
 	return nil
 }
 
-func (i *Indexer) handleMint(mTree *merkletree.MerkleTree, event *contracts.TokenContractTransfer, blockNumber int64) error {
+func (i *indexer) handleMint(mTree *merkletree.MerkleTree, event *contracts.TokenContractTransfer, blockNumber int64) error {
 	receiver := event.To.Big()
 
 	_, leafValue, _, err := mTree.Get(i.ctx, receiver)
@@ -120,31 +126,20 @@ func (i *Indexer) handleMint(mTree *merkletree.MerkleTree, event *contracts.Toke
 		if err != nil {
 			return errors.Wrap(err, "failed to add new leaf in merkle tree")
 		}
-	} else {
-		value := leafValue.Int64() + 1
-		_, err = mTree.Update(i.ctx, receiver, big.NewInt(value))
-		if err != nil {
-			return errors.Wrap(err, "failed to update leaf in merkle tree")
-		}
+
+		return i.updateContractsStates(event, blockNumber, mTree.Root(), "finish handling mint event")
 	}
 
-	err = i.ContractsQ.FilterByAddresses(event.Raw.Address.Hex()).Update(data.ContractToUpdate{
-		Block: &blockNumber,
-	})
+	value := leafValue.Int64() + 1
+	_, err = mTree.Update(i.ctx, receiver, big.NewInt(value))
 	if err != nil {
-		return errors.Wrap(err, "failed to update last handled block")
+		return errors.Wrap(err, "failed to update leaf in merkle tree")
 	}
 
-	err = i.publish(IssuerContract, mTree.Root())
-	if err != nil {
-		return errors.Wrap(err, "failed to publish")
-	}
-
-	i.log.WithField("address", event.Raw.Address.Hex()).Debugf("finish handling mint event")
-	return nil
+	return i.updateContractsStates(event, blockNumber, mTree.Root(), "finish handling mint event")
 }
 
-func (i *Indexer) completelyDeleteKey(mTree *merkletree.MerkleTree, event *contracts.TokenContractTransfer, treeStorage *postgres.Storage) error {
+func (i *indexer) completelyDeleteKey(mTree *merkletree.MerkleTree, event *contracts.TokenContractTransfer, treeStorage *postgres.Storage) error {
 	err := mTree.Delete(i.ctx, event.To.Big())
 	if err != nil {
 		return errors.Wrap(err, "failed to delete address from merkle tree")
@@ -165,11 +160,11 @@ func (i *Indexer) completelyDeleteKey(mTree *merkletree.MerkleTree, event *contr
 		return errors.Wrap(err, "failed to get contract")
 	}
 	if contract == nil {
-		return errors.New("no contract was found")
+		return errors.New(data.NoContractErr)
 	}
 
-	treeStorage = postgres.NewPGDBStorage(i.cfg.DB(), contract.Id)
-	newMTree, err := merkletree.NewMerkleTree(i.ctx, treeStorage, 100)
+	treeStorage = postgres.NewStorage(i.cfg.DB(), contract.Id)
+	newMTree, err := merkletree.NewMerkleTree(i.ctx, treeStorage, data.MaxMTreeLevel)
 	if err != nil {
 		return errors.Wrap(err, "failed to create merkle tree")
 	}
@@ -182,53 +177,73 @@ func (i *Indexer) completelyDeleteKey(mTree *merkletree.MerkleTree, event *contr
 	return nil
 }
 
-func (i *Indexer) publish(name string, root *merkletree.Hash) error {
-	client, err := ethclient.Dial(i.cfg.Infura().Sepolia + i.cfg.Infura().Key)
+func (i *indexer) publish(name string, root *merkletree.Hash) error {
+	err := i.sendUpdates(i.EthereumClient, name, root, i.CertIntegratorEthereum)
 	if err != nil {
-		return errors.Wrap(err, "failed to make dial connect sepolia")
-	}
-	err = i.sendUpdates(client, name, root)
-	if err != nil {
-		return errors.Wrap(err, "failed to publish in sepolia")
+		return errors.Wrap(err, "failed to publish in ethereum")
 	}
 
-	client, err = ethclient.Dial(i.cfg.Infura().Polygon + i.cfg.Infura().Key)
-	if err != nil {
-		return errors.Wrap(err, "failed to make dial connect polygon")
-	}
-	err = i.sendUpdates(client, name, root)
+	err = i.sendUpdates(i.PolygonClient, name, root, i.CertIntegratorPolygon)
 	if err != nil {
 		return errors.Wrap(err, "failed to publish in polygon")
 	}
 
-	//TODO: publish to Q Testnet
+	err = i.sendUpdates(i.QClient, name, root, i.CertIntegratorQ)
+	if err != nil {
+		return errors.Wrap(err, "failed to publish in q")
+	}
 
 	return nil
 }
 
-func (i *Indexer) sendUpdates(client *ethclient.Client, name string, root *merkletree.Hash) error {
+func (i *indexer) sendUpdates(client *ethclient.Client, name string, root *merkletree.Hash, certIntegrator *contracts.CertIntegratorContract) error {
 	auth, err := i.getAuth(client)
 	if err != nil {
 		return errors.Wrap(err, "failed to get auth options")
 	}
 
-	var course [32]byte
-	copy(course[:], name)
+	var course = []byte(name)
+	var state = []byte(hexutil.Encode(common.LeftPadBytes(
+		root.BigInt().Bytes(),
+		32,
+	)))
 
-	certIntegrator, err := contracts.NewCertIntegratorContract(common.HexToAddress(i.cfg.CertificatesIntegrator().Ethereum), client)
-	if err != nil {
-		return errors.Wrap(err, "failed to create new cert integrator contract")
-	}
-
-	_, err = certIntegrator.UpdateCourseState(auth, [][32]byte{course}, [][32]byte{*root})
+	transaction, err := certIntegrator.UpdateCourseState(auth, [][]byte{course}, [][]byte{state})
 	if err != nil {
 		return errors.Wrap(err, "failed to update course state")
+	}
+
+	err = waitForTransactionMined(client, transaction)
+	if err != nil {
+		return errors.Wrap(err, "failed to wait for tx mined")
 	}
 
 	return nil
 }
 
-func (i *Indexer) getAuth(client *ethclient.Client) (*bind.TransactOpts, error) {
+func waitForTransactionMined(client *ethclient.Client, transaction *types.Transaction) error {
+	var (
+		err   error
+		mined = make(chan struct{})
+		ctx   = context.Background()
+	)
+
+	go func() {
+		_, err = bind.WaitMined(ctx, client, transaction)
+		close(mined)
+	}()
+
+	select {
+	case <-mined:
+		if err != nil {
+			return errors.Wrap(err, "failed to mine transaction")
+		}
+	}
+
+	return nil
+}
+
+func (i *indexer) getAuth(client *ethclient.Client) (*bind.TransactOpts, error) {
 	chainID, err := client.ChainID(context.Background())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get chain id")
@@ -244,29 +259,47 @@ func (i *Indexer) getAuth(client *ethclient.Client) (*bind.TransactOpts, error) 
 		return nil, errors.Wrap(err, "failed to create transaction signer")
 	}
 
-	nonce, err := client.PendingNonceAt(context.Background(), fromAddress)
+	_, err = client.PendingNonceAt(context.Background(), fromAddress)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get nonce")
 	}
 
-	auth.Nonce = big.NewInt(int64(nonce))
+	gasPrice, err := client.SuggestGasPrice(context.Background())
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to suggest gas price")
+	}
+
+	auth.GasLimit = uint64(3000000)
+	auth.GasPrice = gasPrice
+
+	//auth.Nonce = big.NewInt(int64(nonce))
 
 	return auth, nil
 }
 
-func (i *Indexer) getKeys() (*ecdsa.PrivateKey, common.Address, error) {
-	privateKey, err := crypto.HexToECDSA(i.cfg.Metamask().PrivateKey)
-	if err != nil {
-		log.Fatal(err)
-	}
+func (i *indexer) getKeys() (*ecdsa.PrivateKey, common.Address, error) {
+	var once sync.Once
+	var privateKey *ecdsa.PrivateKey
+	var fromAddress common.Address
+	var err error
 
-	publicKey := privateKey.Public()
-	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
-	if !ok {
-		return nil, common.Address{}, errors.New("failed to cast public key to ECDSA")
-	}
+	once.Do(func() {
+		privateKey, err = crypto.HexToECDSA(i.cfg.Networks().Networks[data.MetamaskNetwork].PrivateKey)
+		if err != nil {
+			err = errors.Wrap(err, "failed to convert hex to ecdsa")
+			return
+		}
 
-	fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
+		publicKey := privateKey.Public()
+		publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
+		if !ok {
+			err = errors.New(data.FailedToCastKeyErr)
+			return
+		}
+
+		fromAddress = crypto.PubkeyToAddress(*publicKeyECDSA)
+		return
+	})
 
 	return privateKey, fromAddress, nil
 }

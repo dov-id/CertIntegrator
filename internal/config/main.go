@@ -14,8 +14,7 @@ type Config interface {
 	types.Copuser
 	comfig.Listenerer
 
-	Infura() *InfuraCfg
-	Metamask() *MetamaskCfg
+	Networks() *NetworksCfg
 	CertificatesIssuer() *ContractsCfg
 	CertificatesFabric() *ContractsCfg
 	CertificatesIntegrator() *CertificatesIntegratorCfg
@@ -28,8 +27,7 @@ type config struct {
 	comfig.Listenerer
 	getter kv.Getter
 
-	infura                 comfig.Once
-	metamask               comfig.Once
+	networks               comfig.Once
 	certificatesIssuer     comfig.Once
 	certificatesFabric     comfig.Once
 	certificatesIntegrator comfig.Once

@@ -1,0 +1,48 @@
+log:
+  level: debug
+  disable_sentry: true
+
+db:
+  url: db_url
+
+certificates_issuer:
+  list:
+    - address: contract_address
+      from_block: block_to_start_from
+
+certificates_fabric:
+  list:
+    - address: contract_address
+      from_block: block_to_start_from
+
+certificates_integrator:
+  ethereum: contract_address #(Sepolia)
+  polygon: contract_address #(Mumbai)
+  q: contract_address #(Q Testnet)
+
+networks:
+  - name: ethereum
+    rpc_url: wss://...
+    private_key: private_key
+  - name: polygon
+    rpc_url: wss://
+    private_key: ...
+  - name: q
+    rpc_url: wss://
+    private_key: ...
+  - name: metamask
+    rpc_url: rpc_url
+    private_key: private_key
+
+metamask:
+  private_key: private_key
+
+listener:
+  addr: :8000
+
+cop:
+  disabled: true
+  endpoint: "http://..."
+  upstream: "http://..."
+  service_name: cert-integrator-svc
+  service_port: 80

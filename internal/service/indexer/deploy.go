@@ -13,10 +13,10 @@ import (
 	"gitlab.com/distributed_lab/logan/v3/errors"
 )
 
-func (i *Indexer) handleFabricDeployLog(eventLog types.Log, client *ethclient.Client) error {
+func (i *indexer) handleFabricDeployLog(eventLog types.Log, client *ethclient.Client) error {
 	i.log.WithField("address", eventLog.Address.Hex()).Debugf("start handling deploy event")
 
-	fabric, err := contracts.NewTokenFactory(eventLog.Address, client)
+	fabric, err := contracts.NewTokenFactoryContract(eventLog.Address, client)
 	if err != nil {
 		return errors.Wrap(err, "failed to create new issuer instance")
 	}
@@ -39,9 +39,19 @@ func (i *Indexer) handleFabricDeployLog(eventLog types.Log, client *ethclient.Cl
 			Name:  &event.TokenContractParams.TokenName,
 			Block: &blockNumber,
 		})
-		return err
+		return errors.Wrap(err, "failed to update contract")
 	}
 
+	err = i.processNewContract(event)
+	if err != nil {
+		return errors.Wrap(err, "failed to process new contract")
+	}
+
+	i.log.WithField("address", event.Raw.Address.Hex()).Debugf("finish handling deploy event")
+	return nil
+}
+
+func (i *indexer) processNewContract(event *contracts.TokenFactoryContractTokenContractDeployed) error {
 	newContract, err := i.ContractsQ.Insert(data.Contract{
 		Name:    event.TokenContractParams.TokenName,
 		Address: event.NewTokenContractAddr.Hex(),
@@ -51,9 +61,9 @@ func (i *Indexer) handleFabricDeployLog(eventLog types.Log, client *ethclient.Cl
 		return errors.Wrap(err, "failed to save new contract")
 	}
 
-	treeStorage := postgres.NewPGDBStorage(i.cfg.DB(), newContract.Id)
+	treeStorage := postgres.NewStorage(i.cfg.DB(), newContract.Id)
 
-	_, err = merkletree.NewMerkleTree(i.ctx, treeStorage, 100)
+	_, err = merkletree.NewMerkleTree(i.ctx, treeStorage, data.MaxMTreeLevel)
 	if err != nil {
 		return errors.Wrap(err, "failed to create new merkle tree")
 	}
@@ -71,13 +81,12 @@ func (i *Indexer) handleFabricDeployLog(eventLog types.Log, client *ethclient.Cl
 		return errors.Wrap(err, "failed to save last handled block")
 	}
 
-	i.log.WithField("address", event.Raw.Address.Hex()).Debugf("finish handling deploy event")
 	return nil
 }
 
-func (i *Indexer) recreateIssuerRunner(block int64) error {
+func (i *indexer) recreateIssuerRunner(block int64) error {
 	if i.Cancel == nil {
-		return errors.New("ctx cancel function is nil")
+		return errors.New(data.NilCancelFunctionErr)
 	}
 
 	i.Cancel()

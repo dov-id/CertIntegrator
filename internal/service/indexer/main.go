@@ -3,19 +3,21 @@ package indexer
 import (
 	"context"
 
+	"github.com/dov-id/cert-integrator-svc/contracts"
 	"github.com/dov-id/cert-integrator-svc/internal/config"
 	"github.com/dov-id/cert-integrator-svc/internal/data"
 	"github.com/dov-id/cert-integrator-svc/internal/data/postgres"
 	"github.com/dov-id/cert-integrator-svc/internal/helpers"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"gitlab.com/distributed_lab/logan/v3"
 	"gitlab.com/distributed_lab/logan/v3/errors"
 )
 
-type IIndexer interface {
+type Indexer interface {
 	Run(ctx context.Context)
 }
 
-type Indexer struct {
+type indexer struct {
 	cfg config.Config
 	ctx context.Context
 	log *logan.Entry
@@ -25,6 +27,14 @@ type Indexer struct {
 	ContractsQ data.Contracts
 
 	Cancel context.CancelFunc
+
+	EthereumClient *ethclient.Client
+	PolygonClient  *ethclient.Client
+	QClient        *ethclient.Client
+
+	CertIntegratorEthereum *contracts.CertIntegratorContract
+	CertIntegratorPolygon  *contracts.CertIntegratorContract
+	CertIntegratorQ        *contracts.CertIntegratorContract
 }
 
 func Run(cfg config.Config, ctx context.Context) {
