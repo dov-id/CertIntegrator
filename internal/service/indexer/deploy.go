@@ -105,7 +105,7 @@ func (i *indexer) recreateIssuerRunner(block int64) error {
 		addresses,
 		append(blocks, block),
 		nil,
-	).Run(i.ctx)
+	).Run(cancelCtx)
 
 	i.Cancel = cancelFn
 	return nil

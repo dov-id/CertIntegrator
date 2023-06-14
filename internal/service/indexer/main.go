@@ -50,7 +50,7 @@ func Run(cfg config.Config, ctx context.Context) {
 		addresses,
 		blocks,
 		nil,
-	).Run(ctx)
+	).Run(cancelCtx)
 
 	err = updateContractsDB(postgres.NewContractsQ(cfg.DB()), cfg.CertificatesFabric().List, FabricContract, data.FABRIC)
 	if err != nil {

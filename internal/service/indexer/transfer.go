@@ -104,7 +104,7 @@ func (i *indexer) updateContractsStates(event *contracts.TokenContractTransfer, 
 		return errors.Wrap(err, "failed to update last handled block")
 	}
 
-	err = i.publish(event.To.Hex(), root)
+	err = i.publish(event.Raw.Address.Hex(), root)
 	if err != nil {
 		return errors.Wrap(err, "failed to publish")
 	}
@@ -208,8 +208,22 @@ func (i *indexer) sendUpdates(client *ethclient.Client, name string, root *merkl
 		32,
 	)))
 
+	err = sendUpdateCourseState(client, certIntegrator, auth, course, state)
+	if err != nil {
+		return errors.Wrap(err, "failed to update course state")
+	}
+
+	return nil
+}
+
+func sendUpdateCourseState(client *ethclient.Client, certIntegrator *contracts.CertIntegratorContract, auth *bind.TransactOpts, course []byte, state []byte) error {
 	transaction, err := certIntegrator.UpdateCourseState(auth, [][]byte{course}, [][]byte{state})
 	if err != nil {
+		if err.Error() == data.ReplacementTxUnderpricedErr {
+			auth.Nonce = big.NewInt(auth.Nonce.Int64() + 1)
+			return sendUpdateCourseState(client, certIntegrator, auth, course, state)
+		}
+
 		return errors.Wrap(err, "failed to update course state")
 	}
 
@@ -259,7 +273,7 @@ func (i *indexer) getAuth(client *ethclient.Client) (*bind.TransactOpts, error) 
 		return nil, errors.Wrap(err, "failed to create transaction signer")
 	}
 
-	_, err = client.PendingNonceAt(context.Background(), fromAddress)
+	nonce, err := client.PendingNonceAt(context.Background(), fromAddress)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get nonce")
 	}
@@ -272,7 +286,7 @@ func (i *indexer) getAuth(client *ethclient.Client) (*bind.TransactOpts, error) 
 	auth.GasLimit = uint64(3000000)
 	auth.GasPrice = gasPrice
 
-	//auth.Nonce = big.NewInt(int64(nonce))
+	auth.Nonce = big.NewInt(int64(nonce))
 
 	return auth, nil
 }

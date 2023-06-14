@@ -1,9 +1,10 @@
 package data
 
 const (
-	NilCancelFunctionErr = "ctx cancel function is nil"
-	NoContractErr        = "no contract was found"
-	FailedToCastKeyErr   = "failed to cast public key to ECDSA"
+	NilCancelFunctionErr        = "ctx cancel function is nil"
+	NoContractErr               = "no contract was found"
+	FailedToCastKeyErr          = "failed to cast public key to ECDSA"
+	ReplacementTxUnderpricedErr = "replacement transaction underpriced"
 )
 
 const (
