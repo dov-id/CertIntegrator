@@ -35,11 +35,14 @@ func (i *indexer) handleFabricDeployLog(eventLog types.Log, client *ethclient.Cl
 		i.log.WithField("address", contract.Address).Debugf("contract already exists")
 
 		blockNumber := int64(event.Raw.BlockNumber)
-		err = i.ContractsQ.FilterByAddresses(contract.Address).Update(data.ContractToUpdate{
-			Name:  &event.TokenContractParams.TokenName,
+		err = i.ContractsQ.FilterByAddresses(event.Raw.Address.Hex()).Update(data.ContractToUpdate{
 			Block: &blockNumber,
 		})
-		return errors.Wrap(err, "failed to update contract")
+		if err != nil {
+			return errors.Wrap(err, "failed to update fabric contract")
+		}
+
+		return nil
 	}
 
 	err = i.processNewContract(event)
@@ -52,9 +55,12 @@ func (i *indexer) handleFabricDeployLog(eventLog types.Log, client *ethclient.Cl
 }
 
 func (i *indexer) processNewContract(event *contracts.TokenFactoryContractTokenContractDeployed) error {
+	blockNumber := int64(event.Raw.BlockNumber)
+
 	newContract, err := i.ContractsQ.Insert(data.Contract{
 		Name:    event.TokenContractParams.TokenName,
 		Address: event.NewTokenContractAddr.Hex(),
+		Block:   blockNumber,
 		Type:    data.ISSUER,
 	})
 	if err != nil {
@@ -68,17 +74,16 @@ func (i *indexer) processNewContract(event *contracts.TokenFactoryContractTokenC
 		return errors.Wrap(err, "failed to create new merkle tree")
 	}
 
-	blockNumber := int64(event.Raw.BlockNumber)
 	err = i.recreateIssuerRunner(blockNumber)
 	if err != nil {
 		return errors.Wrap(err, "failed to recreate issuers runner")
 	}
 
-	err = i.ContractsQ.FilterByAddresses(newContract.Address).Update(data.ContractToUpdate{
+	err = i.ContractsQ.FilterByAddresses(event.Raw.Address.Hex()).Update(data.ContractToUpdate{
 		Block: &blockNumber,
 	})
 	if err != nil {
-		return errors.Wrap(err, "failed to save last handled block")
+		return errors.Wrap(err, "failed to update fabric contract")
 	}
 
 	return nil

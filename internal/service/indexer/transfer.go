@@ -208,7 +208,7 @@ func (i *indexer) sendUpdates(client *ethclient.Client, name string, root *merkl
 		32,
 	)))
 
-	err = sendUpdateCourseState(client, certIntegrator, auth, course, state)
+	err = i.sendUpdateCourseState(client, certIntegrator, auth, course, state)
 	if err != nil {
 		return errors.Wrap(err, "failed to update course state")
 	}
@@ -216,26 +216,23 @@ func (i *indexer) sendUpdates(client *ethclient.Client, name string, root *merkl
 	return nil
 }
 
-func sendUpdateCourseState(client *ethclient.Client, certIntegrator *contracts.CertIntegratorContract, auth *bind.TransactOpts, course []byte, state []byte) error {
+func (i *indexer) sendUpdateCourseState(client *ethclient.Client, certIntegrator *contracts.CertIntegratorContract, auth *bind.TransactOpts, course []byte, state []byte) error {
 	transaction, err := certIntegrator.UpdateCourseState(auth, [][]byte{course}, [][]byte{state})
 	if err != nil {
 		if err.Error() == data.ReplacementTxUnderpricedErr {
 			auth.Nonce = big.NewInt(auth.Nonce.Int64() + 1)
-			return sendUpdateCourseState(client, certIntegrator, auth, course, state)
+			return i.sendUpdateCourseState(client, certIntegrator, auth, course, state)
 		}
 
 		return errors.Wrap(err, "failed to update course state")
 	}
 
-	err = waitForTransactionMined(client, transaction)
-	if err != nil {
-		return errors.Wrap(err, "failed to wait for tx mined")
-	}
+	i.waitForTransactionMined(client, transaction)
 
 	return nil
 }
 
-func waitForTransactionMined(client *ethclient.Client, transaction *types.Transaction) error {
+func (i *indexer) waitForTransactionMined(client *ethclient.Client, transaction *types.Transaction) {
 	var (
 		err   error
 		mined = make(chan struct{})
@@ -243,18 +240,15 @@ func waitForTransactionMined(client *ethclient.Client, transaction *types.Transa
 	)
 
 	go func() {
+		i.log.WithField("tx", transaction.Hash().Hex()).Debugf("waiting to mine")
 		_, err = bind.WaitMined(ctx, client, transaction)
+		if err != nil {
+			panic(errors.Wrap(err, "failed to mine transaction"))
+		}
+		i.log.WithField("tx", transaction.Hash().Hex()).Debugf("was mined")
+
 		close(mined)
 	}()
-
-	select {
-	case <-mined:
-		if err != nil {
-			return errors.Wrap(err, "failed to mine transaction")
-		}
-	}
-
-	return nil
 }
 
 func (i *indexer) getAuth(client *ethclient.Client) (*bind.TransactOpts, error) {
