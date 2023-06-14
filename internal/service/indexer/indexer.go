@@ -209,6 +209,8 @@ func (i *indexer) subscribeAndProcessNewEvents(client *ethclient.Client) error {
 			if err = i.handleLogs(vLog, client); err != nil {
 				return errors.Wrap(err, "failed to handle log")
 			}
+		case <-i.ctx.Done():
+			return nil
 		}
 	}
 }
