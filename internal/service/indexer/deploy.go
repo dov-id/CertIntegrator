@@ -95,6 +95,7 @@ func (i *indexer) recreateIssuerRunner(block int64) error {
 	}
 
 	i.Cancel()
+	i.wg.Wait()
 
 	dbContracts, err := i.ContractsQ.FilterByTypes(data.ISSUER).Select()
 	if err != nil {
@@ -103,6 +104,7 @@ func (i *indexer) recreateIssuerRunner(block int64) error {
 
 	blocks, addresses := helpers.SeparateDataContractArrays(dbContracts)
 	cancelCtx, cancelFn := context.WithCancel(i.ctx)
+	i.wg.Add(1)
 
 	NewIndexer(
 		i.cfg,
@@ -110,6 +112,7 @@ func (i *indexer) recreateIssuerRunner(block int64) error {
 		addresses,
 		append(blocks, block),
 		nil,
+		i.wg,
 	).Run(cancelCtx)
 
 	i.Cancel = cancelFn

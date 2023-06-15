@@ -2,6 +2,7 @@ package indexer
 
 import (
 	"context"
+	"sync"
 
 	"github.com/dov-id/cert-integrator-svc/contracts"
 	"github.com/dov-id/cert-integrator-svc/internal/config"
@@ -27,6 +28,7 @@ type indexer struct {
 	ContractsQ data.Contracts
 
 	Cancel context.CancelFunc
+	wg     *sync.WaitGroup
 
 	EthereumClient *ethclient.Client
 	PolygonClient  *ethclient.Client
@@ -39,17 +41,21 @@ type indexer struct {
 
 func Run(cfg config.Config, ctx context.Context) {
 	cancelCtx, cancelFn := context.WithCancel(ctx)
+	var wg sync.WaitGroup
+
 	err := updateContractsDB(postgres.NewContractsQ(cfg.DB()), cfg.CertificatesIssuer().List, IssuerContract, data.ISSUER)
 	if err != nil {
 		panic(err)
 	}
 	blocks, addresses := helpers.SeparateContractArrays(cfg.CertificatesIssuer().List)
+	wg.Add(1)
 	NewIndexer(
 		cfg,
 		cancelCtx,
 		addresses,
 		blocks,
 		nil,
+		&wg,
 	).Run(cancelCtx)
 
 	err = updateContractsDB(postgres.NewContractsQ(cfg.DB()), cfg.CertificatesFabric().List, FabricContract, data.FABRIC)
@@ -63,6 +69,7 @@ func Run(cfg config.Config, ctx context.Context) {
 		addresses,
 		blocks,
 		cancelFn,
+		&wg,
 	).Run(ctx)
 }
 

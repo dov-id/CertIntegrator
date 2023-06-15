@@ -4,6 +4,7 @@ import (
 	"context"
 	"math/big"
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/dov-id/cert-integrator-svc/contracts"
@@ -34,7 +35,7 @@ var logsHandlers = map[string]func(i *indexer, eventLog types.Log, client *ethcl
 	crypto.Keccak256Hash([]byte(fabricDeployEventSignature)).Hex():   (*indexer).handleFabricDeployLog,
 }
 
-func NewIndexer(cfg config.Config, ctx context.Context, addresses []string, blocks []int64, cancel context.CancelFunc) Indexer {
+func NewIndexer(cfg config.Config, ctx context.Context, addresses []string, blocks []int64, cancel context.CancelFunc, wg *sync.WaitGroup) Indexer {
 	return &indexer{
 		cfg:        cfg,
 		ctx:        ctx,
@@ -43,6 +44,7 @@ func NewIndexer(cfg config.Config, ctx context.Context, addresses []string, bloc
 		Blocks:     blocks,
 		ContractsQ: postgres.NewContractsQ(cfg.DB().Clone()),
 		Cancel:     cancel,
+		wg:         wg,
 	}
 }
 
@@ -60,6 +62,7 @@ func (i *indexer) Run(ctx context.Context) {
 
 func (i *indexer) listen(_ context.Context) error {
 	i.log.WithField("addresses", i.Addresses).Debugf("start listener")
+	defer i.wg.Done()
 
 	err := i.initNetworkClients()
 	if err != nil {
@@ -146,7 +149,8 @@ func getBlockToStartFrom(contractsQ data.Contracts, addresses []string, blocks [
 
 	sort.Slice(blocks, func(i, j int) bool { return blocks[i] > blocks[j] })
 
-	return big.NewInt(blocks[0]), nil
+	// + 1 in order not to handle already handled last block
+	return big.NewInt(blocks[0] + 1), nil
 }
 
 func (i *indexer) handleLogs(log types.Log, client *ethclient.Client) error {
