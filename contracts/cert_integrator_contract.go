@@ -32,12 +32,12 @@ var (
 // ICertIntegratorData is an auto generated low-level Go binding around an user-defined struct.
 type ICertIntegratorData struct {
 	BlockNumber *big.Int
-	Root        []byte
+	Root        [32]byte
 }
 
 // CertIntegratorContractMetaData contains all meta data concerning the CertIntegratorContract contract.
 var CertIntegratorContractMetaData = &bind.MetaData{
-	ABI: "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"contractData\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"root\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"course_\",\"type\":\"bytes\"}],\"name\":\"getData\",\"outputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"root\",\"type\":\"bytes\"}],\"internalType\":\"structICertIntegrator.Data[]\",\"name\":\"\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"course_\",\"type\":\"bytes\"}],\"name\":\"getDataLength\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"course_\",\"type\":\"bytes\"}],\"name\":\"getLastData\",\"outputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"root\",\"type\":\"bytes\"}],\"internalType\":\"structICertIntegrator.Data\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes[]\",\"name\":\"courses_\",\"type\":\"bytes[]\"},{\"internalType\":\"bytes[]\",\"name\":\"states_\",\"type\":\"bytes[]\"}],\"name\":\"updateCourseState\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
+	ABI: "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"contractData\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"root\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"course_\",\"type\":\"bytes\"}],\"name\":\"getData\",\"outputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"root\",\"type\":\"bytes32\"}],\"internalType\":\"structICertIntegrator.Data[]\",\"name\":\"\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"course_\",\"type\":\"bytes\"}],\"name\":\"getDataLength\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"course_\",\"type\":\"bytes\"}],\"name\":\"getLastData\",\"outputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"root\",\"type\":\"bytes32\"}],\"internalType\":\"structICertIntegrator.Data\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes[]\",\"name\":\"courses_\",\"type\":\"bytes[]\"},{\"internalType\":\"bytes32[]\",\"name\":\"states_\",\"type\":\"bytes32[]\"}],\"name\":\"updateCourseState\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
 }
 
 // CertIntegratorContractABI is the input ABI used to generate the binding from.
@@ -188,24 +188,24 @@ func (_CertIntegratorContract *CertIntegratorContractTransactorRaw) Transact(opt
 
 // ContractData is a free data retrieval call binding the contract method 0x5aacf465.
 //
-// Solidity: function contractData(bytes , uint256 ) view returns(uint256 blockNumber, bytes root)
+// Solidity: function contractData(bytes , uint256 ) view returns(uint256 blockNumber, bytes32 root)
 func (_CertIntegratorContract *CertIntegratorContractCaller) ContractData(opts *bind.CallOpts, arg0 []byte, arg1 *big.Int) (struct {
 	BlockNumber *big.Int
-	Root        []byte
+	Root        [32]byte
 }, error) {
 	var out []interface{}
 	err := _CertIntegratorContract.contract.Call(opts, &out, "contractData", arg0, arg1)
 
 	outstruct := new(struct {
 		BlockNumber *big.Int
-		Root        []byte
+		Root        [32]byte
 	})
 	if err != nil {
 		return *outstruct, err
 	}
 
 	outstruct.BlockNumber = *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
-	outstruct.Root = *abi.ConvertType(out[1], new([]byte)).(*[]byte)
+	outstruct.Root = *abi.ConvertType(out[1], new([32]byte)).(*[32]byte)
 
 	return *outstruct, err
 
@@ -213,27 +213,27 @@ func (_CertIntegratorContract *CertIntegratorContractCaller) ContractData(opts *
 
 // ContractData is a free data retrieval call binding the contract method 0x5aacf465.
 //
-// Solidity: function contractData(bytes , uint256 ) view returns(uint256 blockNumber, bytes root)
+// Solidity: function contractData(bytes , uint256 ) view returns(uint256 blockNumber, bytes32 root)
 func (_CertIntegratorContract *CertIntegratorContractSession) ContractData(arg0 []byte, arg1 *big.Int) (struct {
 	BlockNumber *big.Int
-	Root        []byte
+	Root        [32]byte
 }, error) {
 	return _CertIntegratorContract.Contract.ContractData(&_CertIntegratorContract.CallOpts, arg0, arg1)
 }
 
 // ContractData is a free data retrieval call binding the contract method 0x5aacf465.
 //
-// Solidity: function contractData(bytes , uint256 ) view returns(uint256 blockNumber, bytes root)
+// Solidity: function contractData(bytes , uint256 ) view returns(uint256 blockNumber, bytes32 root)
 func (_CertIntegratorContract *CertIntegratorContractCallerSession) ContractData(arg0 []byte, arg1 *big.Int) (struct {
 	BlockNumber *big.Int
-	Root        []byte
+	Root        [32]byte
 }, error) {
 	return _CertIntegratorContract.Contract.ContractData(&_CertIntegratorContract.CallOpts, arg0, arg1)
 }
 
 // GetData is a free data retrieval call binding the contract method 0x1431b23a.
 //
-// Solidity: function getData(bytes course_) view returns((uint256,bytes)[])
+// Solidity: function getData(bytes course_) view returns((uint256,bytes32)[])
 func (_CertIntegratorContract *CertIntegratorContractCaller) GetData(opts *bind.CallOpts, course_ []byte) ([]ICertIntegratorData, error) {
 	var out []interface{}
 	err := _CertIntegratorContract.contract.Call(opts, &out, "getData", course_)
@@ -250,14 +250,14 @@ func (_CertIntegratorContract *CertIntegratorContractCaller) GetData(opts *bind.
 
 // GetData is a free data retrieval call binding the contract method 0x1431b23a.
 //
-// Solidity: function getData(bytes course_) view returns((uint256,bytes)[])
+// Solidity: function getData(bytes course_) view returns((uint256,bytes32)[])
 func (_CertIntegratorContract *CertIntegratorContractSession) GetData(course_ []byte) ([]ICertIntegratorData, error) {
 	return _CertIntegratorContract.Contract.GetData(&_CertIntegratorContract.CallOpts, course_)
 }
 
 // GetData is a free data retrieval call binding the contract method 0x1431b23a.
 //
-// Solidity: function getData(bytes course_) view returns((uint256,bytes)[])
+// Solidity: function getData(bytes course_) view returns((uint256,bytes32)[])
 func (_CertIntegratorContract *CertIntegratorContractCallerSession) GetData(course_ []byte) ([]ICertIntegratorData, error) {
 	return _CertIntegratorContract.Contract.GetData(&_CertIntegratorContract.CallOpts, course_)
 }
@@ -295,7 +295,7 @@ func (_CertIntegratorContract *CertIntegratorContractCallerSession) GetDataLengt
 
 // GetLastData is a free data retrieval call binding the contract method 0xf2858413.
 //
-// Solidity: function getLastData(bytes course_) view returns((uint256,bytes))
+// Solidity: function getLastData(bytes course_) view returns((uint256,bytes32))
 func (_CertIntegratorContract *CertIntegratorContractCaller) GetLastData(opts *bind.CallOpts, course_ []byte) (ICertIntegratorData, error) {
 	var out []interface{}
 	err := _CertIntegratorContract.contract.Call(opts, &out, "getLastData", course_)
@@ -312,14 +312,14 @@ func (_CertIntegratorContract *CertIntegratorContractCaller) GetLastData(opts *b
 
 // GetLastData is a free data retrieval call binding the contract method 0xf2858413.
 //
-// Solidity: function getLastData(bytes course_) view returns((uint256,bytes))
+// Solidity: function getLastData(bytes course_) view returns((uint256,bytes32))
 func (_CertIntegratorContract *CertIntegratorContractSession) GetLastData(course_ []byte) (ICertIntegratorData, error) {
 	return _CertIntegratorContract.Contract.GetLastData(&_CertIntegratorContract.CallOpts, course_)
 }
 
 // GetLastData is a free data retrieval call binding the contract method 0xf2858413.
 //
-// Solidity: function getLastData(bytes course_) view returns((uint256,bytes))
+// Solidity: function getLastData(bytes course_) view returns((uint256,bytes32))
 func (_CertIntegratorContract *CertIntegratorContractCallerSession) GetLastData(course_ []byte) (ICertIntegratorData, error) {
 	return _CertIntegratorContract.Contract.GetLastData(&_CertIntegratorContract.CallOpts, course_)
 }
@@ -397,24 +397,24 @@ func (_CertIntegratorContract *CertIntegratorContractTransactorSession) Transfer
 	return _CertIntegratorContract.Contract.TransferOwnership(&_CertIntegratorContract.TransactOpts, newOwner)
 }
 
-// UpdateCourseState is a paid mutator transaction binding the contract method 0x35d633a1.
+// UpdateCourseState is a paid mutator transaction binding the contract method 0x4ed86854.
 //
-// Solidity: function updateCourseState(bytes[] courses_, bytes[] states_) returns()
-func (_CertIntegratorContract *CertIntegratorContractTransactor) UpdateCourseState(opts *bind.TransactOpts, courses_ [][]byte, states_ [][]byte) (*types.Transaction, error) {
+// Solidity: function updateCourseState(bytes[] courses_, bytes32[] states_) returns()
+func (_CertIntegratorContract *CertIntegratorContractTransactor) UpdateCourseState(opts *bind.TransactOpts, courses_ [][]byte, states_ [][32]byte) (*types.Transaction, error) {
 	return _CertIntegratorContract.contract.Transact(opts, "updateCourseState", courses_, states_)
 }
 
-// UpdateCourseState is a paid mutator transaction binding the contract method 0x35d633a1.
+// UpdateCourseState is a paid mutator transaction binding the contract method 0x4ed86854.
 //
-// Solidity: function updateCourseState(bytes[] courses_, bytes[] states_) returns()
-func (_CertIntegratorContract *CertIntegratorContractSession) UpdateCourseState(courses_ [][]byte, states_ [][]byte) (*types.Transaction, error) {
+// Solidity: function updateCourseState(bytes[] courses_, bytes32[] states_) returns()
+func (_CertIntegratorContract *CertIntegratorContractSession) UpdateCourseState(courses_ [][]byte, states_ [][32]byte) (*types.Transaction, error) {
 	return _CertIntegratorContract.Contract.UpdateCourseState(&_CertIntegratorContract.TransactOpts, courses_, states_)
 }
 
-// UpdateCourseState is a paid mutator transaction binding the contract method 0x35d633a1.
+// UpdateCourseState is a paid mutator transaction binding the contract method 0x4ed86854.
 //
-// Solidity: function updateCourseState(bytes[] courses_, bytes[] states_) returns()
-func (_CertIntegratorContract *CertIntegratorContractTransactorSession) UpdateCourseState(courses_ [][]byte, states_ [][]byte) (*types.Transaction, error) {
+// Solidity: function updateCourseState(bytes[] courses_, bytes32[] states_) returns()
+func (_CertIntegratorContract *CertIntegratorContractTransactorSession) UpdateCourseState(courses_ [][]byte, states_ [][32]byte) (*types.Transaction, error) {
 	return _CertIntegratorContract.Contract.UpdateCourseState(&_CertIntegratorContract.TransactOpts, courses_, states_)
 }
 
