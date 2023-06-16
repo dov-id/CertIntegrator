@@ -9,12 +9,12 @@ import (
 	"github.com/dov-id/cert-integrator-svc/contracts"
 	"github.com/dov-id/cert-integrator-svc/internal/data"
 	"github.com/dov-id/cert-integrator-svc/internal/data/postgres"
-	"github.com/dov-id/cert-integrator-svc/vendor/github.com/iden3/go-merkletree-sql/v2"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/iden3/go-merkletree-sql/v2"
 	"gitlab.com/distributed_lab/logan/v3/errors"
 )
 
