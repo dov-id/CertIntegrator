@@ -11,7 +11,6 @@ import (
 	"github.com/dov-id/cert-integrator-svc/internal/data/postgres"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -104,7 +103,7 @@ func (i *indexer) updateContractsStates(event *contracts.TokenContractTransfer, 
 		return errors.Wrap(err, "failed to update last handled block")
 	}
 
-	err = i.publish(event.Raw.Address.Hex(), root)
+	err = i.publish(event.Raw.Address.Bytes(), root)
 	if err != nil {
 		return errors.Wrap(err, "failed to publish")
 	}
@@ -177,7 +176,7 @@ func (i *indexer) completelyDeleteKey(mTree *merkletree.MerkleTree, event *contr
 	return nil
 }
 
-func (i *indexer) publish(name string, root *merkletree.Hash) error {
+func (i *indexer) publish(name []byte, root *merkletree.Hash) error {
 	err := i.sendUpdates(i.EthereumClient, name, root, i.CertIntegratorEthereum)
 	if err != nil {
 		return errors.Wrap(err, "failed to publish in ethereum")
@@ -196,19 +195,13 @@ func (i *indexer) publish(name string, root *merkletree.Hash) error {
 	return nil
 }
 
-func (i *indexer) sendUpdates(client *ethclient.Client, name string, root *merkletree.Hash, certIntegrator *contracts.CertIntegratorContract) error {
+func (i *indexer) sendUpdates(client *ethclient.Client, course []byte, root *merkletree.Hash, certIntegrator *contracts.CertIntegratorContract) error {
 	auth, err := i.getAuth(client)
 	if err != nil {
 		return errors.Wrap(err, "failed to get auth options")
 	}
 
-	var course = []byte(name)
-	var state = []byte(hexutil.Encode(common.LeftPadBytes(
-		root.BigInt().Bytes(),
-		32,
-	)))
-
-	err = i.sendUpdateCourseState(client, certIntegrator, auth, course, state)
+	err = i.sendUpdateCourseState(client, certIntegrator, auth, course, root[:])
 	if err != nil {
 		return errors.Wrap(err, "failed to update course state")
 	}
