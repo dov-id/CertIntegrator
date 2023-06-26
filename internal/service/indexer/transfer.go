@@ -1,18 +1,14 @@
 package indexer
 
 import (
-	"context"
-	"crypto/ecdsa"
 	"math/big"
-	"sync"
 
 	"github.com/dov-id/cert-integrator-svc/contracts"
 	"github.com/dov-id/cert-integrator-svc/internal/data"
 	"github.com/dov-id/cert-integrator-svc/internal/data/postgres"
+	"github.com/dov-id/cert-integrator-svc/internal/helpers"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/iden3/go-merkletree-sql/v2"
 	"gitlab.com/distributed_lab/logan/v3/errors"
@@ -95,25 +91,22 @@ func (i *indexer) handleTransfer(mTree *merkletree.MerkleTree, event *contracts.
 	return i.updateContractsStates(event, blockNumber, mTree.Root(), "finish handling transfer event")
 }
 
-func (i *indexer) updateContractsStates(event *contracts.TokenContractTransfer, blockNumber int64, root *merkletree.Hash, msg string) error {
-	err := i.ContractsQ.FilterByAddresses(event.Raw.Address.Hex()).Update(data.ContractToUpdate{
-		Block: &blockNumber,
-	})
-	if err != nil {
-		return errors.Wrap(err, "failed to update last handled block")
-	}
-
-	err = i.publish(event.Raw.Address.Bytes(), root)
-	if err != nil {
-		return errors.Wrap(err, "failed to publish")
-	}
-
-	i.log.WithField("address", event.Raw.Address.Hex()).Debugf(msg)
-	return nil
-}
-
 func (i *indexer) handleMint(mTree *merkletree.MerkleTree, event *contracts.TokenContractTransfer, blockNumber int64) error {
 	receiver := event.To.Big()
+
+	err := helpers.ProcessPublicKey(helpers.ProcessPubKeyParams{
+		Cfg:     i.cfg,
+		Address: event.To,
+		UsersQ:  i.UsersQ,
+		Storage: i.dailyStorage,
+		Clients: i.Clients,
+	})
+	if err != nil {
+		if err.Error() == data.NoPublicKeyErr {
+			return nil
+		}
+		return errors.Wrap(err, "failed to process public key")
+	}
 
 	_, leafValue, _, err := mTree.Get(i.ctx, receiver)
 	if err != nil && err != merkletree.ErrKeyNotFound {
@@ -176,18 +169,35 @@ func (i *indexer) completelyDeleteKey(mTree *merkletree.MerkleTree, event *contr
 	return nil
 }
 
+func (i *indexer) updateContractsStates(event *contracts.TokenContractTransfer, blockNumber int64, root *merkletree.Hash, msg string) error {
+	err := i.ContractsQ.FilterByAddresses(event.Raw.Address.Hex()).Update(data.ContractToUpdate{
+		Block: &blockNumber,
+	})
+	if err != nil {
+		return errors.Wrap(err, "failed to update last handled block")
+	}
+
+	//err = i.publish(event.Raw.Address.Bytes(), root)
+	//if err != nil {
+	//	return errors.Wrap(err, "failed to publish")
+	//}
+
+	i.log.WithField("address", event.Raw.Address.Hex()).Debugf(msg)
+	return nil
+}
+
 func (i *indexer) publish(name []byte, root *merkletree.Hash) error {
-	err := i.sendUpdates(i.EthereumClient, name, root, i.CertIntegratorEthereum)
+	err := i.sendUpdates(i.Clients[data.EthereumNetwork], name, root, i.CertIntegrators[data.EthereumNetwork])
 	if err != nil {
 		return errors.Wrap(err, "failed to publish in ethereum")
 	}
 
-	err = i.sendUpdates(i.PolygonClient, name, root, i.CertIntegratorPolygon)
+	err = i.sendUpdates(i.Clients[data.PolygonNetwork], name, root, i.CertIntegrators[data.PolygonNetwork])
 	if err != nil {
 		return errors.Wrap(err, "failed to publish in polygon")
 	}
 
-	err = i.sendUpdates(i.QClient, name, root, i.CertIntegratorQ)
+	err = i.sendUpdates(i.Clients[data.QNetwork], name, root, i.CertIntegrators[data.QNetwork])
 	if err != nil {
 		return errors.Wrap(err, "failed to publish in q")
 	}
@@ -196,7 +206,7 @@ func (i *indexer) publish(name []byte, root *merkletree.Hash) error {
 }
 
 func (i *indexer) sendUpdates(client *ethclient.Client, course []byte, root *merkletree.Hash, certIntegrator *contracts.CertIntegratorContract) error {
-	auth, err := i.getAuth(client)
+	auth, err := helpers.GetAuth(client, i.cfg.Networks().Networks[data.MetamaskNetwork].Key)
 	if err != nil {
 		return errors.Wrap(err, "failed to get auth options")
 	}
@@ -223,87 +233,7 @@ func (i *indexer) sendUpdateCourseState(client *ethclient.Client, certIntegrator
 		return errors.Wrap(err, "failed to update course state")
 	}
 
-	i.waitForTransactionMined(client, transaction)
+	helpers.WaitForTransactionMined(client, transaction, i.log)
 
 	return nil
-}
-
-func (i *indexer) waitForTransactionMined(client *ethclient.Client, transaction *types.Transaction) {
-	var (
-		err   error
-		mined = make(chan struct{})
-		ctx   = context.Background()
-	)
-
-	go func() {
-		i.log.WithField("tx", transaction.Hash().Hex()).Debugf("waiting to mine")
-		_, err = bind.WaitMined(ctx, client, transaction)
-		if err != nil {
-			panic(errors.Wrap(err, "failed to mine transaction"))
-		}
-		i.log.WithField("tx", transaction.Hash().Hex()).Debugf("was mined")
-
-		close(mined)
-	}()
-}
-
-func (i *indexer) getAuth(client *ethclient.Client) (*bind.TransactOpts, error) {
-	chainID, err := client.ChainID(context.Background())
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get chain id")
-	}
-
-	privateKey, fromAddress, err := i.getKeys()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get keys")
-	}
-
-	auth, err := bind.NewKeyedTransactorWithChainID(privateKey, chainID)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to create transaction signer")
-	}
-
-	nonce, err := client.PendingNonceAt(context.Background(), fromAddress)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get nonce")
-	}
-
-	gasPrice, err := client.SuggestGasPrice(context.Background())
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to suggest gas price")
-	}
-
-	auth.GasLimit = uint64(3000000)
-	auth.GasPrice = gasPrice
-
-	auth.Nonce = big.NewInt(int64(nonce))
-
-	return auth, nil
-}
-
-func (i *indexer) getKeys() (*ecdsa.PrivateKey, common.Address, error) {
-	var once sync.Once
-	var privateKey *ecdsa.PrivateKey
-	var fromAddress common.Address
-	var err error
-
-	once.Do(func() {
-		privateKey, err = crypto.HexToECDSA(i.cfg.Networks().Networks[data.MetamaskNetwork].PrivateKey)
-		if err != nil {
-			err = errors.Wrap(err, "failed to convert hex to ecdsa")
-			return
-		}
-
-		publicKey := privateKey.Public()
-		publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
-		if !ok {
-			err = errors.New(data.FailedToCastKeyErr)
-			return
-		}
-
-		fromAddress = crypto.PubkeyToAddress(*publicKeyECDSA)
-		return
-	})
-
-	return privateKey, fromAddress, nil
 }

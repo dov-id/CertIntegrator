@@ -8,5 +8,7 @@ type ResourceType string
 
 // List of ResourceType
 const (
-	SMT_PROOF ResourceType = "smt_proof"
+	ATTEMPTS   ResourceType = "attempts"
+	PUBLIC_KEY ResourceType = "public_key"
+	SMT_PROOF  ResourceType = "smt_proof"
 )

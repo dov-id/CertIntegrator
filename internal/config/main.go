@@ -14,6 +14,7 @@ type Config interface {
 	types.Copuser
 	comfig.Listenerer
 
+	Attempts() *AttemptsCfg
 	Networks() *NetworksCfg
 	CertificatesIssuer() *ContractsCfg
 	CertificatesFabric() *ContractsCfg
@@ -27,6 +28,7 @@ type config struct {
 	comfig.Listenerer
 	getter kv.Getter
 
+	attempts               comfig.Once
 	networks               comfig.Once
 	certificatesIssuer     comfig.Once
 	certificatesFabric     comfig.Once

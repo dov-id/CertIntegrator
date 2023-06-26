@@ -7,6 +7,7 @@ import (
 	"github.com/dov-id/cert-integrator-svc/internal/config"
 	"github.com/dov-id/cert-integrator-svc/internal/service/api"
 	"github.com/dov-id/cert-integrator-svc/internal/service/indexer"
+	"github.com/dov-id/cert-integrator-svc/internal/service/storage"
 )
 
 type Runner = func(config config.Config, context context.Context)
@@ -20,6 +21,10 @@ func Run(cfg config.Config) {
 	logger := cfg.Log().WithField("service", "main")
 	ctx := context.Background()
 	wg := new(sync.WaitGroup)
+
+	daily := storage.NewDailyStorage()
+	ctx = storage.CtxDailyStorage(daily, ctx)
+	daily.Run(ctx)
 
 	logger.Debugf("Starting all available services")
 
@@ -37,5 +42,4 @@ func Run(cfg config.Config) {
 	}
 
 	wg.Wait()
-
 }
