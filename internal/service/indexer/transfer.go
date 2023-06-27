@@ -177,10 +177,10 @@ func (i *indexer) updateContractsStates(event *contracts.TokenContractTransfer, 
 		return errors.Wrap(err, "failed to update last handled block")
 	}
 
-	//err = i.publish(event.Raw.Address.Bytes(), root)
-	//if err != nil {
-	//	return errors.Wrap(err, "failed to publish")
-	//}
+	err = i.publish(event.Raw.Address.Bytes(), root)
+	if err != nil {
+		return errors.Wrap(err, "failed to publish")
+	}
 
 	i.log.WithField("address", event.Raw.Address.Hex()).Debugf(msg)
 	return nil
