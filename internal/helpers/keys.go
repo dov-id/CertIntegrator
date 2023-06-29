@@ -3,6 +3,7 @@ package helpers
 import (
 	"context"
 	"crypto/ecdsa"
+	"encoding/hex"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -88,7 +89,7 @@ func ProcessPublicKey(params ProcessPubKeyParams) error {
 
 	err = params.UsersQ.Upsert(data.User{
 		Address:   params.Address.Hex(),
-		PublicKey: publicKey.Hex(),
+		PublicKey: hex.EncodeToString(publicKey),
 	})
 	if err != nil {
 		return errors.Wrap(err, "failed to upsert user")
@@ -99,7 +100,7 @@ func ProcessPublicKey(params ProcessPubKeyParams) error {
 	return nil
 }
 
-func RetrievePublicKey(address common.Address, networks map[string]config.Network, clients map[string]*ethclient.Client) (*common.Hash, error) {
+func RetrievePublicKey(address common.Address, networks map[string]config.Network, clients map[string]*ethclient.Client) ([]byte, error) {
 	for network, params := range networks {
 		if network == data.MetamaskNetwork || network == data.InfuraNetwork {
 			continue
@@ -147,7 +148,7 @@ func RetrievePublicKey(address common.Address, networks map[string]config.Networ
 	return nil, nil
 }
 
-func getPublicKey(address common.Address, txs []ScannerTransaction, client *ethclient.Client) (*common.Hash, error) {
+func getPublicKey(address common.Address, txs []ScannerTransaction, client *ethclient.Client) ([]byte, error) {
 	for _, tx := range txs {
 		if strings.ToLower(tx.From) != strings.ToLower(address.Hex()) {
 			continue
@@ -177,7 +178,7 @@ func getPublicKey(address common.Address, txs []ScannerTransaction, client *ethc
 	return nil, nil
 }
 
-func recoverPubKeyFromTx(transaction *types.Transaction, signer types.Signer) (*common.Hash, error) {
+func recoverPubKeyFromTx(transaction *types.Transaction, signer types.Signer) ([]byte, error) {
 	v, r, s := transaction.RawSignatureValues()
 
 	if v.BitLen() > 8 {
@@ -206,9 +207,7 @@ func recoverPubKeyFromTx(transaction *types.Transaction, signer types.Signer) (*
 		return nil, errors.New(data.InvalidPublicKeyErr)
 	}
 
-	pub := common.BytesToHash(pubKey)
-
-	return &pub, nil
+	return pubKey, nil
 }
 
 func GetKeys(private string) (*ecdsa.PrivateKey, common.Address, error) {

@@ -1,6 +1,7 @@
 package indexer
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/dov-id/cert-integrator-svc/contracts"
@@ -187,19 +188,11 @@ func (i *indexer) updateContractsStates(event *contracts.TokenContractTransfer, 
 }
 
 func (i *indexer) publish(name []byte, root *merkletree.Hash) error {
-	err := i.sendUpdates(i.Clients[data.EthereumNetwork], name, root, i.CertIntegrators[data.EthereumNetwork])
-	if err != nil {
-		return errors.Wrap(err, "failed to publish in ethereum")
-	}
-
-	err = i.sendUpdates(i.Clients[data.PolygonNetwork], name, root, i.CertIntegrators[data.PolygonNetwork])
-	if err != nil {
-		return errors.Wrap(err, "failed to publish in polygon")
-	}
-
-	err = i.sendUpdates(i.Clients[data.QNetwork], name, root, i.CertIntegrators[data.QNetwork])
-	if err != nil {
-		return errors.Wrap(err, "failed to publish in q")
+	for network, client := range i.Clients {
+		err := i.sendUpdates(client, name, root, i.CertIntegrators[network])
+		if err != nil {
+			return errors.Wrap(err, fmt.Sprintf("failed to publish in `%s`", network))
+		}
 	}
 
 	return nil
