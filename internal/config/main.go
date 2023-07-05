@@ -14,10 +14,11 @@ type Config interface {
 	types.Copuser
 	comfig.Listenerer
 
-	DBConfig() *DBCfg
 	Infura() *InfuraCfg
+	Metamask() *MetamaskCfg
 	CertificatesIssuer() *ContractsCfg
 	CertificatesFabric() *ContractsCfg
+	CertificatesIntegrator() *CertificatesIntegratorCfg
 }
 
 type config struct {
@@ -27,10 +28,11 @@ type config struct {
 	comfig.Listenerer
 	getter kv.Getter
 
-	db                 comfig.Once
-	infura             comfig.Once
-	certificatesIssuer comfig.Once
-	certificatesFabric comfig.Once
+	infura                 comfig.Once
+	metamask               comfig.Once
+	certificatesIssuer     comfig.Once
+	certificatesFabric     comfig.Once
+	certificatesIntegrator comfig.Once
 }
 
 func New(getter kv.Getter) Config {
