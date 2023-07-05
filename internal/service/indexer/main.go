@@ -9,6 +9,7 @@ import (
 	"github.com/dov-id/cert-integrator-svc/internal/data"
 	"github.com/dov-id/cert-integrator-svc/internal/data/postgres"
 	"github.com/dov-id/cert-integrator-svc/internal/helpers"
+	"github.com/dov-id/cert-integrator-svc/internal/service/storage"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"gitlab.com/distributed_lab/logan/v3"
 	"gitlab.com/distributed_lab/logan/v3/errors"
@@ -23,20 +24,19 @@ type indexer struct {
 	ctx context.Context
 	log *logan.Entry
 
-	Addresses  []string
-	Blocks     []int64
+	Addresses []string
+	Blocks    []int64
+
 	ContractsQ data.Contracts
+	UsersQ     data.Users
 
 	Cancel context.CancelFunc
 	wg     *sync.WaitGroup
 
-	EthereumClient *ethclient.Client
-	PolygonClient  *ethclient.Client
-	QClient        *ethclient.Client
+	Clients         map[string]*ethclient.Client
+	CertIntegrators map[string]*contracts.CertIntegratorContract
 
-	CertIntegratorEthereum *contracts.CertIntegratorContract
-	CertIntegratorPolygon  *contracts.CertIntegratorContract
-	CertIntegratorQ        *contracts.CertIntegratorContract
+	dailyStorage storage.DailyStorage
 }
 
 func Run(cfg config.Config, ctx context.Context) {

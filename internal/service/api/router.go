@@ -15,12 +15,16 @@ func (s *Router) router() chi.Router {
 		ape.LoganMiddleware(s.log),
 		ape.CtxMiddleware(
 			handlers.CtxLog(s.log),
-			handlers.CtxDB(s.cfg.DB().Clone()),
+			handlers.CtxCfg(s.cfg),
+			handlers.CtxParentCtx(s.ctx),
 			handlers.CtxContractsQ(postgres.NewContractsQ(s.cfg.DB().Clone())),
+			handlers.CtxUsersQ(postgres.NewUsersQ(s.cfg.DB().Clone())),
 		),
 	)
 	r.Route("/integrations/cert-integrator-svc", func(r chi.Router) {
 		r.Post("/proof", handlers.GenerateSMTProof)
+
+		r.Get("/public_key", handlers.GetPublicKey)
 	})
 
 	return r

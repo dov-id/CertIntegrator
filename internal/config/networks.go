@@ -10,8 +10,9 @@ type NetworksCfg struct {
 	Networks map[string]Network
 }
 type Network struct {
-	RpcUrl     string
-	PrivateKey string
+	RpcUrl   string
+	HttpsUrl string
+	Key      string
 }
 
 type networksCfg struct {
@@ -19,9 +20,10 @@ type networksCfg struct {
 }
 
 type network struct {
-	Name       string `fig:"name,required"`
-	RpcUrl     string `fig:"rpc_url,required"`
-	PrivateKey string `fig:"private_key,required"`
+	Name     string `fig:"name,required"`
+	RpcUrl   string `fig:"rpc_url,required"`
+	HttpsUrl string `fig:"https_url,required"`
+	Key      string `fig:"key,required"`
 }
 
 func (c *config) Networks() *NetworksCfg {
@@ -49,8 +51,9 @@ func createMapNetworks(list []network) NetworksCfg {
 
 	for _, elem := range list {
 		cfg.Networks[elem.Name] = Network{
-			RpcUrl:     elem.RpcUrl,
-			PrivateKey: elem.PrivateKey,
+			RpcUrl:   elem.RpcUrl,
+			HttpsUrl: elem.HttpsUrl,
+			Key:      elem.Key,
 		}
 	}
 

@@ -1,0 +1,15 @@
+allOf:
+  - $ref: "#/components/schemas/PublicKKey"
+  - type: object
+    required:
+      - attributes
+    properties:
+      attributes:
+        type: object
+        required:
+          - public_key
+        properties:
+          public_key:
+            type: string
+            description: user's public key
+            example: "0xf2aa3386c6f5cc99a5927f56ed423093600b8851bfa2700571df255be6c011e9"

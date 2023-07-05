@@ -17,6 +17,7 @@ type Router struct {
 	listener net.Listener
 
 	cfg config.Config
+	ctx context.Context
 }
 
 func (s *Router) run() error {
@@ -30,17 +31,18 @@ func (s *Router) run() error {
 	return http.Serve(s.listener, r)
 }
 
-func newService(cfg config.Config) *Router {
+func newService(cfg config.Config, ctx context.Context) *Router {
 	return &Router{
 		log:      cfg.Log(),
 		copus:    cfg.Copus(),
 		listener: cfg.Listener(),
 		cfg:      cfg,
+		ctx:      ctx,
 	}
 }
 
-func Run(cfg config.Config, _ context.Context) {
-	if err := newService(cfg).run(); err != nil {
+func Run(cfg config.Config, ctx context.Context) {
+	if err := newService(cfg, ctx).run(); err != nil {
 		panic(err)
 	}
 }
