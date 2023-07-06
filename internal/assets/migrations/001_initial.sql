@@ -13,6 +13,14 @@ create table if not exists contracts (
 
 create index contracts_address_idx on contracts(address);
 
+create table if not exists users (
+    address text not null,
+    public_key text not null,
+    unique(address)
+);
+
+create index users_address_idx on users(address);
+
 create table if not exists mt_nodes (
     mt_id bigint,
     key bytea,
@@ -36,6 +44,8 @@ create table if not exists mt_roots (
 
 drop table if exists mt_roots;
 drop table if exists mt_nodes;
+drop index if exists users_address_idx;
+drop table if exists users;
 drop index if exists contracts_address_idx;
 drop table if exists contracts;
 drop type if exists contracts_type_enum;

@@ -35,7 +35,7 @@ func GenerateSMTProof(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	treeStorage := postgres.NewStorage(DB(r), contract.Id)
+	treeStorage := postgres.NewStorage(Cfg(r).DB().Clone(), contract.Id)
 	mTree, err := merkletree.NewMerkleTree(r.Context(), treeStorage, data.MaxMTreeLevel)
 	if err != nil {
 		Log(r).WithError(err).Error("failed to open/create merkle tree")

@@ -16,6 +16,7 @@ require (
 	gitlab.com/distributed_lab/kit v1.11.2
 	gitlab.com/distributed_lab/logan v3.8.1+incompatible
 	gitlab.com/distributed_lab/running v1.6.0
+	gitlab.com/distributed_lab/urlval v3.0.0+incompatible
 )
 
 require (

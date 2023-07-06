@@ -12,8 +12,8 @@ import (
 	"github.com/dov-id/cert-integrator-svc/internal/data"
 	"github.com/dov-id/cert-integrator-svc/internal/data/postgres"
 	"github.com/dov-id/cert-integrator-svc/internal/helpers"
+	"github.com/dov-id/cert-integrator-svc/internal/service/storage"
 	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -37,14 +37,18 @@ var logsHandlers = map[string]func(i *indexer, eventLog types.Log, client *ethcl
 
 func NewIndexer(cfg config.Config, ctx context.Context, addresses []string, blocks []int64, cancel context.CancelFunc, wg *sync.WaitGroup) Indexer {
 	return &indexer{
-		cfg:        cfg,
-		ctx:        ctx,
-		log:        cfg.Log(),
-		Addresses:  addresses,
-		Blocks:     blocks,
-		ContractsQ: postgres.NewContractsQ(cfg.DB().Clone()),
-		Cancel:     cancel,
-		wg:         wg,
+		cfg:             cfg,
+		ctx:             ctx,
+		log:             cfg.Log(),
+		Addresses:       addresses,
+		Blocks:          blocks,
+		ContractsQ:      postgres.NewContractsQ(cfg.DB().Clone()),
+		UsersQ:          postgres.NewUsersQ(cfg.DB().Clone()),
+		Cancel:          cancel,
+		Clients:         map[string]*ethclient.Client{},
+		CertIntegrators: map[string]*contracts.CertIntegratorContract{},
+		dailyStorage:    storage.DailyStorageInstance(ctx),
+		wg:              wg,
 	}
 }
 
@@ -64,12 +68,13 @@ func (i *indexer) listen(_ context.Context) error {
 	i.log.WithField("addresses", i.Addresses).Debugf("start listener")
 	defer i.wg.Done()
 
-	err := i.initNetworkClients()
+	var err error
+	i.Clients, err = helpers.InitNetworkClients(i.cfg.Networks().Networks)
 	if err != nil {
 		return errors.Wrap(err, "failed to init network clients")
 	}
 
-	err = i.initCertIntegratorContracts()
+	i.CertIntegrators, err = helpers.InitCertIntegratorContracts(i.cfg.CertificatesIntegrator().Addresses, i.Clients)
 	if err != nil {
 		return errors.Wrap(err, "failed to init cert integrator contracts")
 	}
@@ -79,59 +84,14 @@ func (i *indexer) listen(_ context.Context) error {
 		return errors.Wrap(err, "failed to get starting block")
 	}
 
-	err = i.processPastEvents(block, i.EthereumClient)
+	err = i.processPastEvents(block, i.Clients[data.EthereumNetwork])
 	if err != nil {
 		return errors.Wrap(err, "failed to process past events")
 	}
 
-	err = i.subscribeAndProcessNewEvents(i.EthereumClient)
+	err = i.subscribeAndProcessNewEvents(i.Clients[data.EthereumNetwork])
 	if err != nil {
 		return errors.Wrap(err, "failed to subscribe and process events:")
-	}
-
-	return nil
-}
-
-func (i *indexer) initNetworkClients() error {
-	var err error
-
-	network := i.cfg.Networks().Networks[data.EthereumNetwork]
-	i.EthereumClient, err = ethclient.Dial(network.RpcUrl + network.PrivateKey)
-	if err != nil {
-		return errors.Wrap(err, "failed to make dial connect to ethereum")
-	}
-
-	network = i.cfg.Networks().Networks[data.PolygonNetwork]
-	i.PolygonClient, err = ethclient.Dial(network.RpcUrl + network.PrivateKey)
-	if err != nil {
-		return errors.Wrap(err, "failed to make dial connect to polygon")
-	}
-
-	network = i.cfg.Networks().Networks[data.QNetwork]
-	i.QClient, err = ethclient.Dial(network.RpcUrl)
-	if err != nil {
-		return errors.Wrap(err, "failed to make dial connect to q")
-	}
-
-	return nil
-}
-
-func (i *indexer) initCertIntegratorContracts() error {
-	var err error
-
-	i.CertIntegratorEthereum, err = contracts.NewCertIntegratorContract(common.HexToAddress(i.cfg.CertificatesIntegrator().Ethereum), i.EthereumClient)
-	if err != nil {
-		return errors.Wrap(err, "failed to create new ethereum cert integrator contract")
-	}
-
-	i.CertIntegratorPolygon, err = contracts.NewCertIntegratorContract(common.HexToAddress(i.cfg.CertificatesIntegrator().Polygon), i.PolygonClient)
-	if err != nil {
-		return errors.Wrap(err, "failed to create new polygon cert integrator contract")
-	}
-
-	i.CertIntegratorQ, err = contracts.NewCertIntegratorContract(common.HexToAddress(i.cfg.CertificatesIntegrator().Q), i.QClient)
-	if err != nil {
-		return errors.Wrap(err, "failed to create new polygon cert integrator contract")
 	}
 
 	return nil

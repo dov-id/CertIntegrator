@@ -5,6 +5,9 @@ log:
 db:
   url: db_url
 
+attempts:
+  daily: 5
+
 certificates_issuer:
   list:
     - address: contract_address
@@ -16,23 +19,36 @@ certificates_fabric:
       from_block: block_to_start_from
 
 certificates_integrator:
-  ethereum: contract_address #(Sepolia)
-  polygon: contract_address #(Mumbai)
-  q: contract_address #(Q Testnet)
+  list:
+    - network: ethereum # Sepolia
+      address: contract_address
+    - network: polygon # Mumbai
+      address: contract_address
+    - network: q # Testnet
+      address: contract_address
 
 networks:
-  - name: ethereum
-    rpc_url: wss://...
-    private_key: private_key
-  - name: polygon
-    rpc_url: wss://
-    private_key: ...
-  - name: q
-    rpc_url: wss://
-    private_key: ...
-  - name: metamask
-    rpc_url: rpc_url
-    private_key: private_key
+  list:
+    - name: ethereum
+      rpc_url: wss://...
+      https_url: https://...
+      key: api_key
+    - name: polygon
+      rpc_url: wss://
+      https_url: https://...
+      key: api_key
+    - name: q
+      rpc_url: wss://
+      https_url: https://...
+      key: api_key
+    - name: metamask
+      rpc_url: rpc_url
+      https_url: https_url
+      key: private_key
+    - name: infura
+      rpc_url: rpc_url
+      https_url: https_url
+      key: api_key
 
 metamask:
   private_key: private_key
