@@ -16,11 +16,12 @@ get:
             properties:
               data:
                 type: object
-                $ref: '#/components/schemas/PublicKey'
+                $ref: '#/components/schemas/PublicK'
     '400':
       description: Bad request.
     '404':
-      description: Not found.
+      description: Not found. In case if user public key wasn't found the number of last attempts to the current day
+        returned
       content:
         application/json:
           schema:

@@ -6,3 +6,4 @@ docs/web_deploy
 contracts/abi/
 docker-compose.yml
 cert-integrator-svc
+/public

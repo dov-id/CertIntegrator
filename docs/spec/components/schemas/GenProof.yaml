@@ -13,7 +13,7 @@ allOf:
           node_key:
             type: string
             description: key hex string for node for which proof would be generated
-            example: "0x00000000000000000000000052749da41b7196a7001d85ce38fa794fe0f9044e"
+            example: "0x52749da41b7196a7001d85ce38fa794fe0f9044e"
           contract:
             type: string
             description: contract address to retrieve sparse merkle tree

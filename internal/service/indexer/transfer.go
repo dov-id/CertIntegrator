@@ -9,6 +9,7 @@ import (
 	"github.com/dov-id/cert-integrator-svc/internal/data/postgres"
 	"github.com/dov-id/cert-integrator-svc/internal/helpers"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/iden3/go-merkletree-sql/v2"
@@ -178,7 +179,7 @@ func (i *indexer) updateContractsStates(event *contracts.TokenContractTransfer, 
 		return errors.Wrap(err, "failed to update last handled block")
 	}
 
-	err = i.publish(event.Raw.Address.Bytes(), root)
+	err = i.publish(event.Raw.Address, root)
 	if err != nil {
 		return errors.Wrap(err, "failed to publish")
 	}
@@ -187,9 +188,9 @@ func (i *indexer) updateContractsStates(event *contracts.TokenContractTransfer, 
 	return nil
 }
 
-func (i *indexer) publish(name []byte, root *merkletree.Hash) error {
+func (i *indexer) publish(course common.Address, root *merkletree.Hash) error {
 	for network, client := range i.Clients {
-		err := i.sendUpdates(client, name, root, i.CertIntegrators[network])
+		err := i.sendUpdates(client, course, root, i.CertIntegrators[network])
 		if err != nil {
 			return errors.Wrap(err, fmt.Sprintf("failed to publish in `%s`", network))
 		}
@@ -198,7 +199,7 @@ func (i *indexer) publish(name []byte, root *merkletree.Hash) error {
 	return nil
 }
 
-func (i *indexer) sendUpdates(client *ethclient.Client, course []byte, root *merkletree.Hash, certIntegrator *contracts.CertIntegratorContract) error {
+func (i *indexer) sendUpdates(client *ethclient.Client, course common.Address, root *merkletree.Hash, certIntegrator *contracts.CertIntegratorContract) error {
 	auth, err := helpers.GetAuth(client, i.cfg.Networks().Networks[data.MetamaskNetwork].Key)
 	if err != nil {
 		return errors.Wrap(err, "failed to get auth options")
@@ -215,8 +216,8 @@ func (i *indexer) sendUpdates(client *ethclient.Client, course []byte, root *mer
 	return nil
 }
 
-func (i *indexer) sendUpdateCourseState(client *ethclient.Client, certIntegrator *contracts.CertIntegratorContract, auth *bind.TransactOpts, course []byte, state [32]byte) error {
-	transaction, err := certIntegrator.UpdateCourseState(auth, [][]byte{course}, [][32]byte{state})
+func (i *indexer) sendUpdateCourseState(client *ethclient.Client, certIntegrator *contracts.CertIntegratorContract, auth *bind.TransactOpts, course common.Address, state [32]byte) error {
+	transaction, err := certIntegrator.UpdateCourseState(auth, []common.Address{course}, [][32]byte{state})
 	if err != nil {
 		if err.Error() == data.ReplacementTxUnderpricedErr {
 			auth.Nonce = big.NewInt(auth.Nonce.Int64() + 1)

@@ -50,9 +50,6 @@ networks:
       https_url: https_url
       key: api_key
 
-metamask:
-  private_key: private_key
-
 listener:
   addr: :8000
 
