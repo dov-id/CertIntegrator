@@ -8,6 +8,7 @@ import (
 
 type Contract struct {
 	Address   string `figure:"address"`
+	Name      string `figure:"name"`
 	FromBlock int64  `figure:"from_block"`
 }
 

@@ -11,11 +11,13 @@ attempts:
 certificates_issuer:
   list:
     - address: contract_address
+      name: contract_name
       from_block: block_to_start_from
 
 certificates_fabric:
   list:
     - address: contract_address
+      name: contract_name
       from_block: block_to_start_from
 
 certificates_integrator:

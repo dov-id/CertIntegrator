@@ -24,6 +24,7 @@ func (s *Router) router() chi.Router {
 	r.Route("/integrations/cert-integrator-svc", func(r chi.Router) {
 		r.Post("/proof", handlers.GenerateSMTProof)
 
+		r.Get("/courses", handlers.GetCourses)
 		r.Get("/public_key", handlers.GetPublicKey)
 	})
 

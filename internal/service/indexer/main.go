@@ -43,7 +43,7 @@ func Run(cfg config.Config, ctx context.Context) {
 	cancelCtx, cancelFn := context.WithCancel(ctx)
 	var wg sync.WaitGroup
 
-	blocks, addresses, err := updAndGetContractsInfo(postgres.NewContractsQ(cfg.DB()), cfg.CertificatesIssuer().List, IssuerContract, data.ISSUER)
+	blocks, addresses, err := updAndGetContractsInfo(postgres.NewContractsQ(cfg.DB()), cfg.CertificatesIssuer().List, data.ISSUER)
 	if err != nil {
 		panic(errors.Wrap(err, "failed to update and retrieve contracts info"))
 	}
@@ -59,7 +59,7 @@ func Run(cfg config.Config, ctx context.Context) {
 		&wg,
 	).Run(cancelCtx)
 
-	blocks, addresses, err = updAndGetContractsInfo(postgres.NewContractsQ(cfg.DB()), cfg.CertificatesFabric().List, FabricContract, data.FABRIC)
+	blocks, addresses, err = updAndGetContractsInfo(postgres.NewContractsQ(cfg.DB()), cfg.CertificatesFabric().List, data.FABRIC)
 	if err != nil {
 		panic(errors.Wrap(err, "failed to update and retrieve contracts info"))
 	}
@@ -74,8 +74,8 @@ func Run(cfg config.Config, ctx context.Context) {
 	).Run(ctx)
 }
 
-func updAndGetContractsInfo(contractsQ data.Contracts, list []config.Contract, name string, types data.ContractType) ([]int64, []string, error) {
-	err := updateContractsDB(contractsQ, list, name, types)
+func updAndGetContractsInfo(contractsQ data.Contracts, list []config.Contract, types data.ContractType) ([]int64, []string, error) {
+	err := updateContractsDB(contractsQ, list, types)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to update contracts in db")
 	}
@@ -94,7 +94,7 @@ func updAndGetContractsInfo(contractsQ data.Contracts, list []config.Contract, n
 		nil
 }
 
-func updateContractsDB(contractsQ data.Contracts, list []config.Contract, name string, types data.ContractType) error {
+func updateContractsDB(contractsQ data.Contracts, list []config.Contract, types data.ContractType) error {
 	for i := range list {
 		contract, err := contractsQ.FilterByAddresses(list[i].Address).Get()
 		if err != nil {
@@ -106,7 +106,7 @@ func updateContractsDB(contractsQ data.Contracts, list []config.Contract, name s
 		}
 
 		contract, err = contractsQ.Insert(data.Contract{
-			Name:    name,
+			Name:    list[i].Name,
 			Address: list[i].Address,
 			Block:   list[i].FromBlock,
 			Type:    types,

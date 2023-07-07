@@ -1,0 +1,23 @@
+get:
+  tags:
+    - Course
+  summary: Get courses
+  operationId: GetCourses
+  description: Endpoint for getting courses that was indexed by cert integrator service.
+  responses:
+    '200':
+      description: Success
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: array
+                $ref: '#/components/schemas/Course'
+    '400':
+      description: Bad request.
+    '404':
+      description: Not found.
+    '500':
+      description: Internal server error.
