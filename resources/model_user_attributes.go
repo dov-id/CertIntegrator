@@ -4,7 +4,9 @@
 
 package resources
 
-type PublicKeyAttributes struct {
+type UserAttributes struct {
+	// user's address
+	Address string `json:"address"`
 	// user's public key
 	PublicKey string `json:"public_key"`
 }

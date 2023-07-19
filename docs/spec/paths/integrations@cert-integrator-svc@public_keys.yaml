@@ -1,0 +1,24 @@
+get:
+  tags:
+    - Public Key
+  summary: Retrieve public keys
+  operationId: GetPublicKeys
+  description: Endpoint for retrieving user's public keys by course address.
+  parameters:
+    - $ref: '#/components/parameters/courseParam'
+    - $ref: '#/components/parameters/addressParam'
+  responses:
+    '200':
+      description: Success
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: array
+                $ref: '#/components/schemas/User'
+    '400':
+      description: Bad request.
+    '500':
+      description: Internal server error.

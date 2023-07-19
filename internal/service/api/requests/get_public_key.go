@@ -10,7 +10,7 @@ type GetPublicKeyRequest struct {
 	Address *string `filter:"address"`
 }
 
-func NewGetRoleRequest(r *http.Request) (GetPublicKeyRequest, error) {
+func NewGetPublicKeyRequest(r *http.Request) (GetPublicKeyRequest, error) {
 	var request GetPublicKeyRequest
 
 	err := urlval.Decode(r.URL.Query(), &request)

@@ -14,7 +14,8 @@ get:
             properties:
               data:
                 type: array
-                $ref: '#/components/schemas/Course'
+                items:
+                  $ref: '#/components/schemas/Course'
     '400':
       description: Bad request.
     '404':

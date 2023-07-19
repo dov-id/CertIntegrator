@@ -17,7 +17,7 @@ import (
 )
 
 func GetPublicKey(w http.ResponseWriter, r *http.Request) {
-	request, err := requests.NewGetRoleRequest(r)
+	request, err := requests.NewGetPublicKeyRequest(r)
 	if err != nil {
 		Log(r).WithError(err).Error("bad request")
 		ape.RenderErr(w, problems.BadRequest(err)...)
@@ -40,7 +40,7 @@ func GetPublicKey(w http.ResponseWriter, r *http.Request) {
 
 	if user != nil {
 		w.WriteHeader(http.StatusOK)
-		ape.Render(w, models.NewPublicKeyResponse(user.Address, user.PublicKey))
+		ape.Render(w, models.NewUserResponse(*user))
 		return
 	}
 
@@ -89,7 +89,7 @@ func GetPublicKey(w http.ResponseWriter, r *http.Request) {
 
 	if user != nil {
 		w.WriteHeader(http.StatusOK)
-		ape.Render(w, models.NewPublicKeyResponse(user.Address, user.PublicKey))
+		ape.Render(w, models.NewUserResponse(*user))
 		return
 	}
 

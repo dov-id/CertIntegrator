@@ -1,51 +1,50 @@
 -- +migrate Up
 
-create type contracts_type_enum as enum ('fabric', 'issuer');
+CREATE TYPE contracts_type_enum AS enum ('fabric', 'issuer');
 
-create table if not exists contracts (
-    id bigserial primary key,
-    name text not null,
-    address text not null,
-    block bigint not null,
-    type contracts_type_enum not null,
-    unique(address)
+CREATE TABLE IF NOT EXISTS contracts (
+    id      BIGSERIAL PRIMARY KEY,
+    name    TEXT                  NOT NULL,
+    address TEXT                  NOT NULL,
+    block   BIGINT                NOT NULL,
+    type    contracts_type_enum   NOT NULL
 );
 
-create index contracts_address_idx on contracts(address);
+CREATE INDEX contracts_address_idx ON contracts(address);
 
-create table if not exists users (
-    address text not null,
-    public_key text not null,
-    unique(address)
+CREATE TABLE IF NOT EXISTS users (
+    address    TEXT UNIQUE NOT NULL,
+    public_key TEXT        NOT NULL
 );
 
-create index users_address_idx on users(address);
+CREATE INDEX users_address_idx ON users(address);
 
-create table if not exists mt_nodes (
-    mt_id bigint,
-    key bytea,
-    type smallint not null,
-    child_l bytea,
-    child_r bytea,
-    entry bytea,
-    created_at bigint,
-    deleted_at bigint,
-    primary key(mt_id, key)
+CREATE TABLE IF NOT EXISTS mt_nodes (
+    mt_id      BIGINT,
+    key        BYTEA,
+    type       SMALLINT NOT NULL,
+    child_l    BYTEA,
+    child_r    BYTEA,
+    entry      BYTEA,
+    created_at BIGINT,
+    deleted_at BIGINT,
+
+    PRIMARY KEY(mt_id, key)
 );
 
-create table if not exists mt_roots (
-    mt_id bigint primary key,
-    key bytea,
-    created_at bigint,
-    deleted_at bigint
+CREATE TABLE IF NOT EXISTS mt_roots (
+    mt_id      BIGINT PRIMARY KEY,
+    key        BYTEA,
+    created_at BIGINT,
+    deleted_at BIGINT
 );
 
 -- +migrate Down
 
-drop table if exists mt_roots;
-drop table if exists mt_nodes;
-drop index if exists users_address_idx;
-drop table if exists users;
-drop index if exists contracts_address_idx;
-drop table if exists contracts;
-drop type if exists contracts_type_enum;
+DROP TABLE IF EXISTS mt_roots;
+DROP TABLE IF EXISTS mt_nodes;
+DROP INDEX IF EXISTS users_address_idx;
+DROP TABLE IF EXISTS users;
+DROP INDEX IF EXISTS contracts_address_idx;
+DROP TABLE IF EXISTS contracts;
+DROP TYPE IF EXISTS contracts_type_enum;

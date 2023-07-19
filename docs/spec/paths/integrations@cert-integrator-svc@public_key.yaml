@@ -16,7 +16,7 @@ get:
             properties:
               data:
                 type: object
-                $ref: '#/components/schemas/PublicK'
+                $ref: '#/components/schemas/User'
     '400':
       description: Bad request.
     '404':

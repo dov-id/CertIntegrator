@@ -26,6 +26,7 @@ func (s *Router) router() chi.Router {
 
 		r.Get("/courses", handlers.GetCourses)
 		r.Get("/public_key", handlers.GetPublicKey)
+		r.Get("/public_keys", handlers.GetPublicKeys)
 	})
 
 	return r
