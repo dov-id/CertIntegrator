@@ -14,7 +14,7 @@ type Config interface {
 	types.Copuser
 	comfig.Listenerer
 
-	Attempts() *AttemptsCfg
+	PublicKeyRetriever() *PublicKeyRetrieverCfg
 	Networks() *NetworksCfg
 	CertificatesIssuer() *ContractsCfg
 	CertificatesFabric() *ContractsCfg

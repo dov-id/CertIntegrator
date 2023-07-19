@@ -111,5 +111,5 @@ func getLeftAttemptsAmount(ctx context.Context, cfg config.Config, address commo
 		return 0, errors.Wrap(err, "failed to get amount from storage")
 	}
 
-	return cfg.Attempts().Daily - amount, nil
+	return cfg.PublicKeyRetriever().DailyAttemptsCount - amount, nil
 }

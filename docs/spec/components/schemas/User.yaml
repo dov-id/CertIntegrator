@@ -1,5 +1,5 @@
 allOf:
-  - $ref: "#/components/schemas/PublicKKey"
+  - $ref: "#/components/schemas/UserKey"
   - type: object
     required:
       - attributes

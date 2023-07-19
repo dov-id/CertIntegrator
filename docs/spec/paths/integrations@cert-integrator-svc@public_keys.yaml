@@ -17,7 +17,8 @@ get:
             properties:
               data:
                 type: array
-                $ref: '#/components/schemas/User'
+                items:
+                  $ref: '#/components/schemas/User'
     '400':
       description: Bad request.
     '500':

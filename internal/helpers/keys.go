@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 	"sync"
@@ -65,7 +66,7 @@ func ProcessPublicKey(params ProcessPubKeyParams) error {
 		return nil
 	}
 
-	isMaxAttempts, err := Check(params.Storage, params.Address, params.Cfg.Attempts().Daily)
+	isMaxAttempts, err := Check(params.Storage, params.Address, params.Cfg.PublicKeyRetriever().DailyAttemptsCount)
 	if err != nil {
 		return errors.Wrap(err, "failed to check attempts in storage")
 	}
@@ -80,7 +81,7 @@ func ProcessPublicKey(params ProcessPubKeyParams) error {
 	}
 
 	if publicKey == nil {
-		err = Add(params.Storage, params.Address, params.Cfg.Attempts().Daily)
+		err = Add(params.Storage, params.Address, params.Cfg.PublicKeyRetriever().DailyAttemptsCount)
 		if err != nil {
 			return errors.Wrap(err, "failed to add attempt in storage")
 		}
@@ -89,7 +90,7 @@ func ProcessPublicKey(params ProcessPubKeyParams) error {
 
 	err = params.UsersQ.Upsert(data.User{
 		Address:   params.Address.Hex(),
-		PublicKey: hex.EncodeToString(publicKey),
+		PublicKey: fmt.Sprintf("0x%s", hex.EncodeToString(publicKey)),
 	})
 	if err != nil {
 		return errors.Wrap(err, "failed to upsert user")
