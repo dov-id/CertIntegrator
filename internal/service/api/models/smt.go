@@ -17,7 +17,7 @@ func newSMTProof(id int64, key, value string, proof []string) resources.SmtProof
 	}
 }
 
-func NewLinkResponse(id int64, key, value string, proof []string) resources.SmtProofResponse {
+func NewSMTProofResponse(id int64, key, value string, proof []string) resources.SmtProofResponse {
 	return resources.SmtProofResponse{
 		Data: newSMTProof(id, key, value, proof),
 	}

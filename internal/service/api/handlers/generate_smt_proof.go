@@ -76,5 +76,7 @@ func GenerateSMTProof(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ape.Render(w, models.NewLinkResponse(int64(contract.Id), keyHash.Hex(), valueHash.Hex(), hexProof))
+	Log(r).Warnf("MerkleTreeRoot: `%s`", mTree.Root().Hex())
+
+	ape.Render(w, models.NewSMTProofResponse(int64(contract.Id), keyHash.Hex(), valueHash.Hex(), hexProof))
 }
