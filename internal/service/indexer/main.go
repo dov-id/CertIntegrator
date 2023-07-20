@@ -42,6 +42,7 @@ type indexer struct {
 type newIndexerParams struct {
 	cfg             config.Config
 	ctx             context.Context
+	issuerCh        chan string
 	issuerAddresses []string
 	issuerBlocks    []int64
 	fabricAddresses []string
@@ -85,7 +86,7 @@ func NewIndexer(params newIndexerParams) Indexer {
 	return &indexer{
 		cfg:             params.cfg,
 		log:             params.cfg.Log(),
-		issuerCh:        make(chan string),
+		issuerCh:        params.issuerCh,
 		Addresses:       addresses,
 		Blocks:          blocks,
 		ContractsQ:      postgres.NewContractsQ(params.cfg.DB().Clone()),

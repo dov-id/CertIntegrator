@@ -119,6 +119,7 @@ func prepareIndexerParams(cfg config.Config) (*newIndexerParams, error) {
 	return &newIndexerParams{
 		cfg:             cfg,
 		clients:         clients,
+		issuerCh:        make(chan string),
 		certIntegrators: certIntegrators,
 		issuerBlocks:    issuerBlocks,
 		issuerAddresses: issuerAddresses,

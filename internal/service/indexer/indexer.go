@@ -143,7 +143,7 @@ func (i *indexer) subscribeAndProcessNewEvents(ctx context.Context, client *ethc
 		case address := <-i.issuerCh:
 			i.Addresses = append(i.Addresses, address)
 			subscription.Unsubscribe()
-			return i.subscribeAndProcessNewEvents(ctx, client)
+			return i.listen(ctx)
 		}
 	}
 }

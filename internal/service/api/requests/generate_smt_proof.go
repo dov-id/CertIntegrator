@@ -31,11 +31,11 @@ func (r *GenerateProofRequest) validate() error {
 }
 
 func MustBeValidEthAddress(src interface{}) error {
-	raw, ok := src.(string)
+	raw, ok := src.(*string)
 	if !ok {
 		return data.ErrNotString
 	}
-	if !common.IsHexAddress(raw) {
+	if !common.IsHexAddress(*raw) {
 		return data.ErrInvalidEthAddress
 	}
 
