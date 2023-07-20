@@ -18,5 +18,5 @@ func GetCourses(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	ape.Render(w, models.NewCourseArrayResponse(contracts))
+	ape.Render(w, models.NewCourseListResponse(contracts))
 }

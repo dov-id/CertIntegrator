@@ -8,12 +8,12 @@ type GenProof struct {
 	Key
 	Attributes GenProofAttributes `json:"attributes"`
 }
-type GenProofResponse struct {
+type GenProofRequest struct {
 	Data     GenProof `json:"data"`
 	Included Included `json:"included"`
 }
 
-type GenProofListResponse struct {
+type GenProofListRequest struct {
 	Data     []GenProof `json:"data"`
 	Included Included   `json:"included"`
 	Links    *Links     `json:"links"`

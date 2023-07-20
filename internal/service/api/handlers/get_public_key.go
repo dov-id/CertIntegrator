@@ -9,8 +9,10 @@ import (
 	"github.com/dov-id/cert-integrator-svc/internal/helpers"
 	"github.com/dov-id/cert-integrator-svc/internal/service/api/models"
 	"github.com/dov-id/cert-integrator-svc/internal/service/api/requests"
+	"github.com/dov-id/cert-integrator-svc/internal/service/indexer"
 	"github.com/dov-id/cert-integrator-svc/internal/service/storage"
 	"github.com/ethereum/go-ethereum/common"
+	pkgErrors "github.com/pkg/errors"
 	"gitlab.com/distributed_lab/ape"
 	"gitlab.com/distributed_lab/ape/problems"
 	"gitlab.com/distributed_lab/logan/v3/errors"
@@ -29,9 +31,8 @@ func GetPublicKey(w http.ResponseWriter, r *http.Request) {
 		ape.RenderErr(w, problems.BadRequest(err)...)
 		return
 	}
-	address := *request.Address
 
-	user, err := UsersQ(r).FilterByAddresses(address).Get()
+	user, err := UsersQ(r).FilterByAddresses(*request.Address).Get()
 	if err != nil {
 		Log(r).WithError(err).Error("failed to get user")
 		ape.RenderErr(w, problems.BadRequest(err)...)
@@ -44,7 +45,7 @@ func GetPublicKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	clients, err := helpers.InitNetworkClients(Cfg(r).Networks().Networks)
+	clients, err := indexer.InitNetworkClients(Cfg(r).Networks().Networks, Cfg(r).RpcProvider())
 	if err != nil {
 		Log(r).WithError(err).Error("failed to init network clents")
 		ape.RenderErr(w, problems.InternalError())
@@ -52,15 +53,16 @@ func GetPublicKey(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = helpers.ProcessPublicKey(helpers.ProcessPubKeyParams{
+		Ctx:     ParentCtx(r),
 		Cfg:     Cfg(r),
-		Address: common.HexToAddress(address),
+		Address: common.HexToAddress(*request.Address),
 		UsersQ:  UsersQ(r),
 		Storage: storage.DailyStorageInstance(ParentCtx(r)),
 		Clients: clients,
 	})
 	if err != nil {
-		if err.Error() == data.NoPublicKeyErr {
-			amount, err := getLeftAttemptsAmount(ParentCtx(r), Cfg(r), common.HexToAddress(address))
+		if pkgErrors.Is(err, data.ErrNoPublicKey) {
+			amount, err := getLeftAttemptsAmount(ParentCtx(r), Cfg(r), common.HexToAddress(*request.Address))
 			if err != nil {
 				Log(r).WithError(err).Error("failed to get left attempts amount")
 				ape.RenderErr(w, problems.InternalError())
@@ -80,10 +82,10 @@ func GetPublicKey(w http.ResponseWriter, r *http.Request) {
 		client.Close()
 	}
 
-	user, err = UsersQ(r).FilterByAddresses(address).Get()
+	user, err = UsersQ(r).FilterByAddresses(*request.Address).Get()
 	if err != nil {
 		Log(r).WithError(err).Error("failed to get user")
-		ape.RenderErr(w, problems.BadRequest(err)...)
+		ape.RenderErr(w, problems.InternalError())
 		return
 	}
 
@@ -93,7 +95,7 @@ func GetPublicKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	amount, err := getLeftAttemptsAmount(ParentCtx(r), Cfg(r), common.HexToAddress(address))
+	amount, err := getLeftAttemptsAmount(ParentCtx(r), Cfg(r), common.HexToAddress(*request.Address))
 	if err != nil {
 		Log(r).WithError(err).Error("failed to get left attempts amount")
 		ape.RenderErr(w, problems.InternalError())
@@ -106,7 +108,7 @@ func GetPublicKey(w http.ResponseWriter, r *http.Request) {
 }
 
 func getLeftAttemptsAmount(ctx context.Context, cfg config.Config, address common.Address) (int64, error) {
-	amount, err := helpers.Get(storage.DailyStorageInstance(ctx), address)
+	amount, err := storage.GetRemainingAttempts(storage.DailyStorageInstance(ctx), address)
 	if err != nil {
 		return 0, errors.Wrap(err, "failed to get amount from storage")
 	}

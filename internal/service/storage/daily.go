@@ -18,57 +18,52 @@ type DailyStorage interface {
 }
 
 type dailyStorage struct {
-	mapping map[string]interface{}
-	mutex   sync.Mutex
+	mapping sync.Map
 }
 
 func NewDailyStorage() DailyStorage {
-	return &dailyStorage{
-		mapping: make(map[string]interface{}),
-	}
+	return &dailyStorage{}
 }
 
 func (ds *dailyStorage) Get(key string) (interface{}, bool) {
-	ds.mutex.Lock()
-	defer ds.mutex.Unlock()
-	val, ok := ds.mapping[key]
+	val, ok := ds.mapping.Load(key)
 	return val, ok
 }
 
 func (ds *dailyStorage) Set(key string, value interface{}) {
-	ds.mutex.Lock()
-	defer ds.mutex.Unlock()
-	ds.mapping[key] = value
+	ds.mapping.Store(key, value)
 }
 
 func (ds *dailyStorage) Delete(key string) {
-	ds.mutex.Lock()
-	defer ds.mutex.Unlock()
-	delete(ds.mapping, key)
+	ds.mapping.Delete(key)
 }
 
 func (ds *dailyStorage) Clear() {
-	ds.mutex.Lock()
-	defer ds.mutex.Unlock()
-	ds.mapping = make(map[string]interface{})
+	ds.mapping.Range(func(key interface{}, value interface{}) bool {
+		ds.mapping.Delete(key)
+		return true
+	})
 }
 
 func (ds *dailyStorage) Run(ctx context.Context) {
-	go func() {
-		for {
-			now := time.Now().UTC()
-			// must process at 00:00 AM every day
-			nextDay := time.Date(now.Year(), now.Month(), now.Day()+1, 0, 0, 0, 0, time.UTC)
-			timer := time.NewTimer(time.Until(nextDay))
-			select {
-			case <-timer.C:
-				ds.Clear()
-			case <-ctx.Done():
-				timer.Stop()
-				break
-			}
+	for {
+		timer := initTimer()
+		select {
+		case <-timer.C:
+			ds.Clear()
+		case <-ctx.Done():
+			timer.Stop()
+			break
 		}
-	}()
+	}
+}
+
+// must process at 00:00 AM every day
+func initTimer() *time.Timer {
+	now := time.Now().UTC()
+	nextDay := time.Date(now.Year(), now.Month(), now.Day()+1, 0, 0, 0, 0, time.UTC)
+
+	return time.NewTimer(time.Until(nextDay))
 }
 
 func DailyStorageInstance(ctx context.Context) DailyStorage {

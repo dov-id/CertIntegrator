@@ -33,24 +33,16 @@ networks:
   list:
     - name: ethereum
       rpc_url: wss://...
-      https_url: https://...
-      key: api_key
+      https_api_url: https://...
+      api_key: api_key
     - name: polygon
       rpc_url: wss://
-      https_url: https://...
-      key: api_key
+      https_api_url: https://...
+      api_key: api_key
     - name: q
       rpc_url: wss://
-      https_url: https://...
-      key: api_key
-    - name: metamask
-      rpc_url: rpc_url
-      https_url: https_url
-      key: private_key
-    - name: infura
-      rpc_url: rpc_url
-      https_url: https_url
-      key: api_key
+      https_api_url: https://...
+      api_key: api_key
 
 #metamask
 wallet:

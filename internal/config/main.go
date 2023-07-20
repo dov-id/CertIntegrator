@@ -16,6 +16,8 @@ type Config interface {
 
 	PublicKeyRetriever() *PublicKeyRetrieverCfg
 	Networks() *NetworksCfg
+	Wallet() *WalletCfg
+	RpcProvider() *RpcProviderCfg
 	CertificatesIssuer() *ContractsCfg
 	CertificatesFabric() *ContractsCfg
 	CertificatesIntegrator() *CertificatesIntegratorCfg
@@ -28,8 +30,10 @@ type config struct {
 	comfig.Listenerer
 	getter kv.Getter
 
-	attempts               comfig.Once
+	publicKeyRetriever     comfig.Once
 	networks               comfig.Once
+	wallet                 comfig.Once
+	rpcProvider            comfig.Once
 	certificatesIssuer     comfig.Once
 	certificatesFabric     comfig.Once
 	certificatesIntegrator comfig.Once

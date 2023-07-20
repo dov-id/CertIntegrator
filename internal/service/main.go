@@ -24,7 +24,7 @@ func Run(cfg config.Config) {
 
 	daily := storage.NewDailyStorage()
 	ctx = storage.CtxDailyStorage(daily, ctx)
-	daily.Run(ctx)
+	go daily.Run(ctx)
 
 	logger.Debugf("Starting all available services")
 

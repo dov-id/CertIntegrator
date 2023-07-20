@@ -1,18 +1,19 @@
 package config
 
 import (
+	"github.com/dov-id/cert-integrator-svc/internal/types"
 	"gitlab.com/distributed_lab/figure"
 	"gitlab.com/distributed_lab/kit/kv"
 	"gitlab.com/distributed_lab/logan/v3/errors"
 )
 
 type NetworksCfg struct {
-	Networks map[string]Network
+	Networks map[types.Network]Network
 }
 type Network struct {
-	RpcUrl   string
-	HttpsUrl string
-	Key      string
+	RpcUrl      string
+	HttpsApiUrl string
+	ApiKey      string
 }
 
 type networksCfg struct {
@@ -20,10 +21,10 @@ type networksCfg struct {
 }
 
 type network struct {
-	Name     string `fig:"name,required"`
-	RpcUrl   string `fig:"rpc_url,required"`
-	HttpsUrl string `fig:"https_url,required"`
-	Key      string `fig:"key,required"`
+	Name        string `fig:"name,required"`
+	RpcUrl      string `fig:"rpc_url,required"`
+	HttpsApiUrl string `fig:"https_api_url,required"`
+	ApiKey      string `fig:"api_key,required"`
 }
 
 func (c *config) Networks() *NetworksCfg {
@@ -40,22 +41,21 @@ func (c *config) Networks() *NetworksCfg {
 			panic(errors.Wrap(err, "failed to figure out networks config"))
 		}
 
-		mapCfg := createMapNetworks(cfg.List)
-		return &mapCfg
+		return createMapNetworks(cfg.List)
 	}).(*NetworksCfg)
 }
 
-func createMapNetworks(list []network) NetworksCfg {
+func createMapNetworks(list []network) *NetworksCfg {
 	var cfg NetworksCfg
-	cfg.Networks = make(map[string]Network)
+	cfg.Networks = make(map[types.Network]Network)
 
 	for _, elem := range list {
-		cfg.Networks[elem.Name] = Network{
-			RpcUrl:   elem.RpcUrl,
-			HttpsUrl: elem.HttpsUrl,
-			Key:      elem.Key,
+		cfg.Networks[types.Network(elem.Name)] = Network{
+			RpcUrl:      elem.RpcUrl,
+			HttpsApiUrl: elem.HttpsApiUrl,
+			ApiKey:      elem.ApiKey,
 		}
 	}
 
-	return cfg
+	return &cfg
 }

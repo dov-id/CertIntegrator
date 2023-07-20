@@ -1,13 +1,14 @@
 package config
 
 import (
+	"github.com/dov-id/cert-integrator-svc/internal/types"
 	"gitlab.com/distributed_lab/figure"
 	"gitlab.com/distributed_lab/kit/kv"
 	"gitlab.com/distributed_lab/logan/v3/errors"
 )
 
 type CertificatesIntegratorCfg struct {
-	Addresses map[string]string
+	Addresses map[types.Network]string
 }
 
 type integratorsCfg struct {
@@ -30,21 +31,20 @@ func (c *config) CertificatesIntegrator() *CertificatesIntegratorCfg {
 			Please()
 
 		if err != nil {
-			panic(errors.Wrap(err, "failed to figure out networks config"))
+			panic(errors.Wrap(err, "failed to figure out cert integrators config"))
 		}
 
-		mapCfg := createMapIntegrators(cfg.List)
-		return &mapCfg
+		return createMapIntegrators(cfg.List)
 	}).(*CertificatesIntegratorCfg)
 }
 
-func createMapIntegrators(list []integrator) CertificatesIntegratorCfg {
+func createMapIntegrators(list []integrator) *CertificatesIntegratorCfg {
 	var cfg CertificatesIntegratorCfg
-	cfg.Addresses = make(map[string]string)
+	cfg.Addresses = make(map[types.Network]string)
 
 	for _, elem := range list {
-		cfg.Addresses[elem.Network] = elem.Address
+		cfg.Addresses[types.Network(elem.Network)] = elem.Address
 	}
 
-	return cfg
+	return &cfg
 }

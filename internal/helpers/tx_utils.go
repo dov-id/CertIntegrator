@@ -11,8 +11,8 @@ import (
 	"gitlab.com/distributed_lab/logan/v3/errors"
 )
 
-func GetAuth(client *ethclient.Client, private string) (*bind.TransactOpts, error) {
-	chainID, err := client.ChainID(context.Background())
+func GetAuth(ctx context.Context, client *ethclient.Client, private string) (*bind.TransactOpts, error) {
+	chainID, err := client.ChainID(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get chain id")
 	}
@@ -27,39 +27,25 @@ func GetAuth(client *ethclient.Client, private string) (*bind.TransactOpts, erro
 		return nil, errors.Wrap(err, "failed to create transaction signer")
 	}
 
-	nonce, err := client.PendingNonceAt(context.Background(), fromAddress)
+	nonce, err := client.PendingNonceAt(ctx, fromAddress)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get nonce")
 	}
-
-	gasPrice, err := client.SuggestGasPrice(context.Background())
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to suggest gas price")
-	}
-
-	auth.GasLimit = uint64(3000000)
-	auth.GasPrice = gasPrice
 
 	auth.Nonce = big.NewInt(int64(nonce))
 
 	return auth, nil
 }
 
-func WaitForTransactionMined(client *ethclient.Client, transaction *types.Transaction, log *logan.Entry) {
-	var (
-		err   error
-		mined = make(chan struct{})
-		ctx   = context.Background()
-	)
-
+func WaitForTransactionMined(client *ethclient.Client, transaction *types.Transaction, ctx context.Context, log *logan.Entry) {
 	go func() {
 		log.WithField("tx", transaction.Hash().Hex()).Debugf("waiting to mine")
-		_, err = bind.WaitMined(ctx, client, transaction)
+
+		_, err := bind.WaitMined(ctx, client, transaction)
 		if err != nil {
 			panic(errors.Wrap(err, "failed to mine transaction"))
 		}
-		log.WithField("tx", transaction.Hash().Hex()).Debugf("was mined")
 
-		close(mined)
+		log.WithField("tx", transaction.Hash().Hex()).Debugf("was mined")
 	}()
 }

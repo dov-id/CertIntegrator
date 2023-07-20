@@ -11,7 +11,7 @@ type PublicKeyRetrieverCfg struct {
 }
 
 func (c *config) PublicKeyRetriever() *PublicKeyRetrieverCfg {
-	return c.attempts.Do(func() interface{} {
+	return c.publicKeyRetriever.Do(func() interface{} {
 		var cfg PublicKeyRetrieverCfg
 
 		err := figure.

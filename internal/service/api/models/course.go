@@ -15,7 +15,7 @@ func newCourse(contract data.Contract) resources.Course {
 	}
 }
 
-func newCourseArray(contracts []data.Contract) []resources.Course {
+func newCourseList(contracts []data.Contract) []resources.Course {
 	var courses = make([]resources.Course, 0)
 	for _, contract := range contracts {
 		courses = append(courses, newCourse(contract))
@@ -24,8 +24,8 @@ func newCourseArray(contracts []data.Contract) []resources.Course {
 	return courses
 }
 
-func NewCourseArrayResponse(contracts []data.Contract) resources.CourseListResponse {
+func NewCourseListResponse(contracts []data.Contract) resources.CourseListResponse {
 	return resources.CourseListResponse{
-		Data: newCourseArray(contracts),
+		Data: newCourseList(contracts),
 	}
 }

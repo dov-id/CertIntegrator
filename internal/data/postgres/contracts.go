@@ -32,7 +32,7 @@ func NewContractsQ(db *pgdb.DB) data.Contracts {
 }
 
 func (r ContractsQ) New() data.Contracts {
-	return NewContractsQ(r.db)
+	return NewContractsQ(r.db.Clone())
 }
 
 func (r ContractsQ) Get() (*data.Contract, error) {
@@ -49,9 +49,7 @@ func (r ContractsQ) Get() (*data.Contract, error) {
 func (r ContractsQ) Select() ([]data.Contract, error) {
 	var result []data.Contract
 
-	err := r.db.Select(&result, r.selectBuilder)
-
-	return result, err
+	return result, r.db.Select(&result, r.selectBuilder)
 }
 
 func (r ContractsQ) Insert(contract data.Contract) (*data.Contract, error) {

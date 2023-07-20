@@ -1,23 +1,29 @@
 package data
 
 import (
+	"errors"
 	"io"
 	"net/http"
 	"time"
+
+	"github.com/dov-id/cert-integrator-svc/internal/types"
 )
 
-const (
-	NilCancelFunctionErr        = "ctx cancel function is nil"
-	NoContractErr               = "no contract was found"
-	FailedToCastKeyErr          = "failed to cast public key to ECDSA"
-	FailedToCastIntErr          = "failed to cast interface{} to int64"
-	ReplacementTxUnderpricedErr = "replacement transaction underpriced"
-	WrongSignatureValueErr      = "wrong signature value"
-	WrongSignatureValuesErr     = "wrong signature values"
-	InvalidPublicKeyErr         = "invalid public key"
-	NoPublicKeyErr              = "no public key was found"
-	MaxAttemptsAmountErr        = "attempts amount to get public key reached max value"
-	NoSuchKeyErr                = "no such key in storage"
+var (
+	ErrNilCancelFunction        = errors.New("ctx cancel function is nil")
+	ErrNoContract               = errors.New("no contract was found")
+	ErrFailedToCastKey          = errors.New("failed to cast public key to ECDSA")
+	ErrFailedToCastInt          = errors.New("failed to cast interface{} to int64")
+	ErrReplacementTxUnderpriced = errors.New("replacement transaction underpriced")
+	ErrWrongSignatureValue      = errors.New("wrong signature value")
+	ErrWrongSignatureValues     = errors.New("wrong signature values")
+	ErrInvalidPublicKey         = errors.New("invalid public key")
+	ErrNoPublicKey              = errors.New("no public key was found")
+	ErrMaxAttemptsAmount        = errors.New("attempts amount to get public key reached max value")
+	ErrNoSuchKey                = errors.New("no such key in storage")
+	ErrTxWithoutSignature       = errors.New("server returned transaction without signature")
+	ErrNotString                = errors.New("the value is not a string")
+	ErrInvalidEthAddress        = errors.New("given value is invalid ethereum address")
 )
 
 const (
@@ -26,11 +32,9 @@ const (
 )
 
 const (
-	MetamaskNetwork = "metamask"
-	InfuraNetwork   = "infura"
-	EthereumNetwork = "ethereum"
-	PolygonNetwork  = "polygon"
-	QNetwork        = "q"
+	EthereumNetwork types.Network = "ethereum"
+	PolygonNetwork  types.Network = "polygon"
+	QNetwork        types.Network = "q"
 )
 
 type RequestParams struct {

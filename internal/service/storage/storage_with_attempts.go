@@ -1,20 +1,18 @@
-package helpers
+package storage
 
 import (
 	"github.com/dov-id/cert-integrator-svc/internal/data"
-	"github.com/dov-id/cert-integrator-svc/internal/service/storage"
 	"github.com/ethereum/go-ethereum/common"
-	"gitlab.com/distributed_lab/logan/v3/errors"
 )
 
-func Add(storage storage.DailyStorage, address common.Address, maxAttemptsAmount int64) error {
+func AddAttempt(storage DailyStorage, address common.Address, maxAttemptsAmount int64) error {
 	hexAddress := address.Hex()
 	var newValue int64 = 1
 
 	val, ok := storage.Get(hexAddress)
 	if !ok {
 		if maxAttemptsAmount < newValue {
-			return errors.New(data.MaxAttemptsAmountErr)
+			return data.ErrMaxAttemptsAmount
 		}
 		storage.Set(hexAddress, newValue)
 		return nil
@@ -22,12 +20,12 @@ func Add(storage storage.DailyStorage, address common.Address, maxAttemptsAmount
 
 	attempts, ok := val.(int64)
 	if !ok {
-		return errors.New(data.FailedToCastIntErr)
+		return data.ErrFailedToCastInt
 	}
 	newValue = attempts + 1
 
 	if maxAttemptsAmount < newValue {
-		return errors.New(data.MaxAttemptsAmountErr)
+		return data.ErrMaxAttemptsAmount
 	}
 
 	storage.Set(hexAddress, newValue)
@@ -35,21 +33,21 @@ func Add(storage storage.DailyStorage, address common.Address, maxAttemptsAmount
 	return nil
 }
 
-func Get(storage storage.DailyStorage, address common.Address) (int64, error) {
+func GetRemainingAttempts(storage DailyStorage, address common.Address) (int64, error) {
 	val, ok := storage.Get(address.Hex())
 	if !ok {
-		return 0, errors.New(data.NoSuchKeyErr)
+		return 0, data.ErrNoSuchKey
 	}
 
 	attempts, ok := val.(int64)
 	if !ok {
-		return 0, errors.New(data.FailedToCastIntErr)
+		return 0, data.ErrFailedToCastInt
 	}
 
 	return attempts, nil
 }
 
-func Check(storage storage.DailyStorage, address common.Address, maxAttemptsAmount int64) (bool, error) {
+func CheckAttemptsExceeded(storage DailyStorage, address common.Address, maxAttemptsAmount int64) (bool, error) {
 	val, ok := storage.Get(address.Hex())
 	if !ok {
 		return false, nil
@@ -57,7 +55,7 @@ func Check(storage storage.DailyStorage, address common.Address, maxAttemptsAmou
 
 	attempts, ok := val.(int64)
 	if !ok {
-		return false, errors.New(data.FailedToCastIntErr)
+		return false, data.ErrFailedToCastInt
 	}
 
 	return maxAttemptsAmount == attempts, nil

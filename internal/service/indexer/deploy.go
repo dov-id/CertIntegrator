@@ -6,14 +6,13 @@ import (
 	"github.com/dov-id/cert-integrator-svc/contracts"
 	"github.com/dov-id/cert-integrator-svc/internal/data"
 	"github.com/dov-id/cert-integrator-svc/internal/data/postgres"
-	"github.com/dov-id/cert-integrator-svc/internal/helpers"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/iden3/go-merkletree-sql/v2"
 	"gitlab.com/distributed_lab/logan/v3/errors"
 )
 
-func (i *indexer) handleFabricDeployLog(eventLog types.Log, client *ethclient.Client) error {
+func (i *indexer) handleFabricDeployLog(ctx context.Context, eventLog types.Log, client *ethclient.Client) error {
 	i.log.WithField("address", eventLog.Address.Hex()).Debugf("start handling deploy event")
 
 	fabric, err := contracts.NewTokenFactoryContract(eventLog.Address, client)
@@ -45,7 +44,7 @@ func (i *indexer) handleFabricDeployLog(eventLog types.Log, client *ethclient.Cl
 		return nil
 	}
 
-	err = i.processNewContract(event)
+	err = i.processNewContract(ctx, event)
 	if err != nil {
 		return errors.Wrap(err, "failed to process new contract")
 	}
@@ -54,7 +53,7 @@ func (i *indexer) handleFabricDeployLog(eventLog types.Log, client *ethclient.Cl
 	return nil
 }
 
-func (i *indexer) processNewContract(event *contracts.TokenFactoryContractTokenContractDeployed) error {
+func (i *indexer) processNewContract(ctx context.Context, event *contracts.TokenFactoryContractTokenContractDeployed) error {
 	blockNumber := int64(event.Raw.BlockNumber)
 
 	newContract, err := i.ContractsQ.Insert(data.Contract{
@@ -69,12 +68,12 @@ func (i *indexer) processNewContract(event *contracts.TokenFactoryContractTokenC
 
 	treeStorage := postgres.NewStorage(i.cfg.DB(), newContract.Id)
 
-	_, err = merkletree.NewMerkleTree(i.ctx, treeStorage, data.MaxMTreeLevel)
+	_, err = merkletree.NewMerkleTree(ctx, treeStorage, data.MaxMTreeLevel)
 	if err != nil {
 		return errors.Wrap(err, "failed to create new merkle tree")
 	}
 
-	err = i.recreateIssuerRunner(blockNumber)
+	err = i.recreateIssuerRunner(event.NewTokenContractAddr.Hex())
 	if err != nil {
 		return errors.Wrap(err, "failed to recreate issuers runner")
 	}
@@ -89,32 +88,7 @@ func (i *indexer) processNewContract(event *contracts.TokenFactoryContractTokenC
 	return nil
 }
 
-func (i *indexer) recreateIssuerRunner(block int64) error {
-	if i.Cancel == nil {
-		return errors.New(data.NilCancelFunctionErr)
-	}
-
-	i.Cancel()
-	i.wg.Wait()
-
-	dbContracts, err := i.ContractsQ.FilterByTypes(data.ISSUER).Select()
-	if err != nil {
-		return errors.Wrap(err, "failed to select contracts")
-	}
-
-	blocks, addresses := helpers.SeparateDataContractArrays(dbContracts)
-	cancelCtx, cancelFn := context.WithCancel(i.ctx)
-	i.wg.Add(1)
-
-	NewIndexer(
-		i.cfg,
-		cancelCtx,
-		addresses,
-		append(blocks, block),
-		nil,
-		i.wg,
-	).Run(cancelCtx)
-
-	i.Cancel = cancelFn
+func (i *indexer) recreateIssuerRunner(newContract string) error {
+	i.issuerCh <- newContract
 	return nil
 }

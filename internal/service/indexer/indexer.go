@@ -4,15 +4,10 @@ import (
 	"context"
 	"math/big"
 	"sort"
-	"sync"
 	"time"
 
-	"github.com/dov-id/cert-integrator-svc/contracts"
-	"github.com/dov-id/cert-integrator-svc/internal/config"
 	"github.com/dov-id/cert-integrator-svc/internal/data"
-	"github.com/dov-id/cert-integrator-svc/internal/data/postgres"
 	"github.com/dov-id/cert-integrator-svc/internal/helpers"
-	"github.com/dov-id/cert-integrator-svc/internal/service/storage"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -30,26 +25,9 @@ const (
 	fabricDeployEventSignature   = "TokenContractDeployed(address,(uint256,string,string))"
 )
 
-var logsHandlers = map[string]func(i *indexer, eventLog types.Log, client *ethclient.Client) error{
+var logsHandlers = map[string]func(i *indexer, ctx context.Context, eventLog types.Log, client *ethclient.Client) error{
 	crypto.Keccak256Hash([]byte(issuerTransferEventSignature)).Hex(): (*indexer).handleIssuerTransferLog,
 	crypto.Keccak256Hash([]byte(fabricDeployEventSignature)).Hex():   (*indexer).handleFabricDeployLog,
-}
-
-func NewIndexer(cfg config.Config, ctx context.Context, addresses []string, blocks []int64, cancel context.CancelFunc, wg *sync.WaitGroup) Indexer {
-	return &indexer{
-		cfg:             cfg,
-		ctx:             ctx,
-		log:             cfg.Log(),
-		Addresses:       addresses,
-		Blocks:          blocks,
-		ContractsQ:      postgres.NewContractsQ(cfg.DB().Clone()),
-		UsersQ:          postgres.NewUsersQ(cfg.DB().Clone()),
-		Cancel:          cancel,
-		Clients:         map[string]*ethclient.Client{},
-		CertIntegrators: map[string]*contracts.CertIntegratorContract{},
-		dailyStorage:    storage.DailyStorageInstance(ctx),
-		wg:              wg,
-	}
 }
 
 func (i *indexer) Run(ctx context.Context) {
@@ -64,32 +42,21 @@ func (i *indexer) Run(ctx context.Context) {
 	)
 }
 
-func (i *indexer) listen(_ context.Context) error {
+func (i *indexer) listen(ctx context.Context) error {
 	i.log.WithField("addresses", i.Addresses).Debugf("start listener")
 	defer i.wg.Done()
-
-	var err error
-	i.Clients, err = helpers.InitNetworkClients(i.cfg.Networks().Networks)
-	if err != nil {
-		return errors.Wrap(err, "failed to init network clients")
-	}
-
-	i.CertIntegrators, err = helpers.InitCertIntegratorContracts(i.cfg.CertificatesIntegrator().Addresses, i.Clients)
-	if err != nil {
-		return errors.Wrap(err, "failed to init cert integrator contracts")
-	}
 
 	block, err := getBlockToStartFrom(i.ContractsQ, i.Addresses, i.Blocks)
 	if err != nil {
 		return errors.Wrap(err, "failed to get starting block")
 	}
 
-	err = i.processPastEvents(block, i.Clients[data.EthereumNetwork])
+	err = i.processPastEvents(ctx, block, i.Clients[data.EthereumNetwork])
 	if err != nil {
 		return errors.Wrap(err, "failed to process past events")
 	}
 
-	err = i.subscribeAndProcessNewEvents(i.Clients[data.EthereumNetwork])
+	err = i.subscribeAndProcessNewEvents(ctx, i.Clients[data.EthereumNetwork])
 	if err != nil {
 		return errors.Wrap(err, "failed to subscribe and process events:")
 	}
@@ -113,9 +80,9 @@ func getBlockToStartFrom(contractsQ data.Contracts, addresses []string, blocks [
 	return big.NewInt(blocks[0] + 1), nil
 }
 
-func (i *indexer) handleLogs(log types.Log, client *ethclient.Client) error {
+func (i *indexer) handleLogs(ctx context.Context, log types.Log, client *ethclient.Client) error {
 	if logHandler, ok := logsHandlers[log.Topics[0].Hex()]; ok {
-		err := logHandler(i, log, client)
+		err := logHandler(i, ctx, log, client)
 		if err != nil {
 			return errors.Wrap(err, "failed to handle log")
 		}
@@ -124,7 +91,7 @@ func (i *indexer) handleLogs(log types.Log, client *ethclient.Client) error {
 	return nil
 }
 
-func (i *indexer) processPastEvents(block *big.Int, client *ethclient.Client) error {
+func (i *indexer) processPastEvents(ctx context.Context, block *big.Int, client *ethclient.Client) error {
 	i.log.WithFields(map[string]interface{}{"block": block.String(), "addresses": i.Addresses}).Debugf("start processing past events")
 
 	filterQuery := ethereum.FilterQuery{
@@ -133,7 +100,7 @@ func (i *indexer) processPastEvents(block *big.Int, client *ethclient.Client) er
 		ToBlock:   nil,
 	}
 
-	oldLogs, err := client.FilterLogs(context.Background(), filterQuery)
+	oldLogs, err := client.FilterLogs(ctx, filterQuery)
 	if err != nil {
 		return errors.Wrap(err, "failed to filter logs")
 	}
@@ -141,7 +108,7 @@ func (i *indexer) processPastEvents(block *big.Int, client *ethclient.Client) er
 	for _, log := range oldLogs {
 		i.log.WithFields(map[string]interface{}{"block": log.BlockNumber, "address": log.Address.Hex()}).Debugf("processing past event")
 
-		err = i.handleLogs(log, client)
+		err = i.handleLogs(ctx, log, client)
 		if err != nil {
 			return errors.Wrap(err, "failed to handle log")
 		}
@@ -153,14 +120,14 @@ func (i *indexer) processPastEvents(block *big.Int, client *ethclient.Client) er
 	return nil
 }
 
-func (i *indexer) subscribeAndProcessNewEvents(client *ethclient.Client) error {
+func (i *indexer) subscribeAndProcessNewEvents(ctx context.Context, client *ethclient.Client) error {
 	query := ethereum.FilterQuery{
 		Addresses: helpers.ConvertStringToAddresses(i.Addresses),
 	}
 
 	logs := make(chan types.Log)
 
-	subscription, err := client.SubscribeFilterLogs(context.Background(), query, logs)
+	subscription, err := client.SubscribeFilterLogs(ctx, query, logs)
 	if err != nil {
 		return errors.Wrap(err, "failed to subscribe to logs")
 	}
@@ -170,11 +137,13 @@ func (i *indexer) subscribeAndProcessNewEvents(client *ethclient.Client) error {
 		case err = <-subscription.Err():
 			return errors.Wrap(err, "some error with subscription")
 		case vLog := <-logs:
-			if err = i.handleLogs(vLog, client); err != nil {
+			if err = i.handleLogs(ctx, vLog, client); err != nil {
 				return errors.Wrap(err, "failed to handle log")
 			}
-		case <-i.ctx.Done():
-			return nil
+		case address := <-i.issuerCh:
+			i.Addresses = append(i.Addresses, address)
+			subscription.Unsubscribe()
+			return i.subscribeAndProcessNewEvents(ctx, client)
 		}
 	}
 }

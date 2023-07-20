@@ -8,8 +8,8 @@ import (
 	"github.com/dov-id/cert-integrator-svc/internal/config"
 	"github.com/dov-id/cert-integrator-svc/internal/data"
 	"github.com/dov-id/cert-integrator-svc/internal/data/postgres"
-	"github.com/dov-id/cert-integrator-svc/internal/helpers"
 	"github.com/dov-id/cert-integrator-svc/internal/service/storage"
+	"github.com/dov-id/cert-integrator-svc/internal/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"gitlab.com/distributed_lab/logan/v3"
 	"gitlab.com/distributed_lab/logan/v3/errors"
@@ -21,9 +21,9 @@ type Indexer interface {
 
 type indexer struct {
 	cfg config.Config
-	ctx context.Context
 	log *logan.Entry
 
+	issuerCh  chan string
 	Addresses []string
 	Blocks    []int64
 
@@ -33,87 +33,67 @@ type indexer struct {
 	Cancel context.CancelFunc
 	wg     *sync.WaitGroup
 
-	Clients         map[string]*ethclient.Client
-	CertIntegrators map[string]*contracts.CertIntegratorContract
+	Clients         map[types.Network]*ethclient.Client
+	CertIntegrators map[types.Network]*contracts.CertIntegratorContract
 
 	dailyStorage storage.DailyStorage
+}
+
+type newIndexerParams struct {
+	cfg             config.Config
+	ctx             context.Context
+	issuerAddresses []string
+	issuerBlocks    []int64
+	fabricAddresses []string
+	fabricBlocks    []int64
+	cancel          context.CancelFunc
+	wg              *sync.WaitGroup
+	clients         map[types.Network]*ethclient.Client
+	certIntegrators map[types.Network]*contracts.CertIntegratorContract
 }
 
 func Run(cfg config.Config, ctx context.Context) {
 	cancelCtx, cancelFn := context.WithCancel(ctx)
 	var wg sync.WaitGroup
 
-	blocks, addresses, err := updAndGetContractsInfo(postgres.NewContractsQ(cfg.DB()), cfg.CertificatesIssuer().List, data.ISSUER)
+	params, err := prepareIndexerParams(cfg)
 	if err != nil {
-		panic(errors.Wrap(err, "failed to update and retrieve contracts info"))
+		panic(errors.Wrap(err, "failed to prepare indexer params"))
 	}
 
 	wg.Add(1)
 
-	NewIndexer(
-		cfg,
-		cancelCtx,
-		addresses,
-		blocks,
-		nil,
-		&wg,
-	).Run(cancelCtx)
+	params.ctx = cancelCtx
+	params.wg = &wg
+	params.cancel = nil
 
-	blocks, addresses, err = updAndGetContractsInfo(postgres.NewContractsQ(cfg.DB()), cfg.CertificatesFabric().List, data.FABRIC)
-	if err != nil {
-		panic(errors.Wrap(err, "failed to update and retrieve contracts info"))
-	}
+	NewIndexer(*params).Run(cancelCtx)
 
-	NewIndexer(
-		cfg,
-		ctx,
-		addresses,
-		blocks,
-		cancelFn,
-		&wg,
-	).Run(ctx)
+	params.cancel = cancelFn
+
+	NewIndexer(*params).Run(ctx)
 }
 
-func updAndGetContractsInfo(contractsQ data.Contracts, list []config.Contract, types data.ContractType) ([]int64, []string, error) {
-	err := updateContractsDB(contractsQ, list, types)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to update contracts in db")
+func NewIndexer(params newIndexerParams) Indexer {
+	addresses := params.issuerAddresses
+	blocks := params.issuerBlocks
+	if params.cancel != nil {
+		addresses = params.fabricAddresses
+		blocks = params.fabricBlocks
 	}
 
-	cfgBlocks, cfgAddresses := helpers.SeparateContractArrays(list)
-
-	dbContracts, err := contractsQ.FilterByTypes(types).Select()
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to get contract from database")
+	return &indexer{
+		cfg:             params.cfg,
+		log:             params.cfg.Log(),
+		issuerCh:        make(chan string),
+		Addresses:       addresses,
+		Blocks:          blocks,
+		ContractsQ:      postgres.NewContractsQ(params.cfg.DB().Clone()),
+		UsersQ:          postgres.NewUsersQ(params.cfg.DB().Clone()),
+		Cancel:          params.cancel,
+		Clients:         params.clients,
+		CertIntegrators: params.certIntegrators,
+		dailyStorage:    storage.DailyStorageInstance(params.ctx),
+		wg:              params.wg,
 	}
-
-	dbBlocks, dbAddresses := helpers.SeparateDataContractArrays(dbContracts)
-
-	return helpers.RemoveDuplicatesInt64Arr(append(cfgBlocks, dbBlocks...)),
-		helpers.RemoveDuplicatesStringsArr(append(cfgAddresses, dbAddresses...)),
-		nil
-}
-
-func updateContractsDB(contractsQ data.Contracts, list []config.Contract, types data.ContractType) error {
-	for i := range list {
-		contract, err := contractsQ.FilterByAddresses(list[i].Address).Get()
-		if err != nil {
-			return errors.Wrap(err, "failed to get contract from database")
-		}
-
-		if contract != nil {
-			continue
-		}
-
-		contract, err = contractsQ.Insert(data.Contract{
-			Name:    list[i].Name,
-			Address: list[i].Address,
-			Block:   list[i].FromBlock,
-			Type:    types,
-		})
-		if err != nil {
-			return errors.Wrap(err, "failed to save new contract")
-		}
-	}
-	return nil
 }

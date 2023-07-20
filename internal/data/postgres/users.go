@@ -31,7 +31,7 @@ func NewUsersQ(db *pgdb.DB) data.Users {
 }
 
 func (q UsersQ) New() data.Users {
-	return NewUsersQ(q.db)
+	return NewUsersQ(q.db.Clone())
 }
 
 func (q UsersQ) Get() (*data.User, error) {
@@ -48,9 +48,7 @@ func (q UsersQ) Get() (*data.User, error) {
 func (q UsersQ) Select() ([]data.User, error) {
 	var result []data.User
 
-	err := q.db.Select(&result, q.selectBuilder)
-
-	return result, err
+	return result, q.db.Select(&result, q.selectBuilder)
 }
 
 func (q UsersQ) Upsert(user data.User) error {

@@ -15,13 +15,13 @@ import (
 	"gitlab.com/distributed_lab/logan/v3/errors"
 )
 
-func MakeHttpRequest(params data.RequestParams) (*data.ResponseParams, error) {
+func MakeHttpRequest(ctx context.Context, params data.RequestParams) (*data.ResponseParams, error) {
 	req, err := http.NewRequest(params.Method, params.Link, bytes.NewReader(params.Body))
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't create request")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), params.Timeout)
+	ctx, cancel := context.WithTimeout(ctx, params.Timeout)
 	defer cancel()
 	req = req.WithContext(ctx)
 
@@ -57,14 +57,14 @@ func MakeHttpRequest(params data.RequestParams) (*data.ResponseParams, error) {
 	}, nil
 }
 
-func HandleHttpResponseStatusCode(response *data.ResponseParams, params data.RequestParams) (*data.ResponseParams, error) {
+func HandleHttpResponseStatusCode(ctx context.Context, response *data.ResponseParams, params data.RequestParams) (*data.ResponseParams, error) {
 	switch status := response.StatusCode; {
 	case status >= http.StatusOK && status < http.StatusMultipleChoices:
 		return response, nil
 	case status == http.StatusNotFound:
 		return nil, nil
 	case status == http.StatusTooManyRequests:
-		return HandleTooManyRequests(response.Header, params)
+		return HandleTooManyRequests(ctx, response.Header, params)
 	case status < http.StatusOK || status >= http.StatusMultipleChoices:
 		return nil, errors.New(fmt.Sprintf("error in response `%s`", http.StatusText(response.StatusCode)))
 	default:
@@ -72,7 +72,7 @@ func HandleHttpResponseStatusCode(response *data.ResponseParams, params data.Req
 	}
 }
 
-func HandleTooManyRequests(header http.Header, params data.RequestParams) (*data.ResponseParams, error) {
+func HandleTooManyRequests(ctx context.Context, header http.Header, params data.RequestParams) (*data.ResponseParams, error) {
 	durationInSeconds, err := strconv.ParseInt(header.Get("Retry-After"), 10, 64)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to parse `retry-after `header")
@@ -82,21 +82,21 @@ func HandleTooManyRequests(header http.Header, params data.RequestParams) (*data
 	log.Printf("we need to wait `%s`", timeoutDuration.String())
 	time.Sleep(timeoutDuration)
 
-	return MakeHttpRequest(params)
+	return MakeHttpRequest(ctx, params)
 }
 
-func MakeRequestWithPagination(params data.RequestParams) ([]byte, error) {
+func MakeRequestWithPagination(ctx context.Context, params data.RequestParams) ([]byte, error) {
 	result := make([]interface{}, 0)
 
 	for page := 1; ; page++ {
 		params.Query["page"] = strconv.Itoa(page)
 
-		res, err := MakeHttpRequest(params)
+		res, err := MakeHttpRequest(ctx, params)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to make http request")
 		}
 
-		res, err = HandleHttpResponseStatusCode(res, params)
+		res, err = HandleHttpResponseStatusCode(ctx, res, params)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to check response status code")
 		}
