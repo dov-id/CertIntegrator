@@ -2,13 +2,11 @@ package helpers
 
 import (
 	"context"
-	"crypto/ecdsa"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/dov-id/cert-integrator-svc/internal/config"
@@ -125,9 +123,6 @@ func RetrievePublicKey(ctx context.Context, address common.Address, networks map
 			return nil, errors.Wrap(err, "failed to make http request")
 		}
 
-		//	TODO: think about checking response status to handle
-		//  rate limit or just bad request/internal errors
-
 		if response == nil {
 			return nil, nil
 		}
@@ -209,31 +204,4 @@ func recoverPubKeyFromTx(transaction *types.Transaction, signer types.Signer) ([
 	}
 
 	return pubKey, nil
-}
-
-func GetKeys(private string) (*ecdsa.PrivateKey, common.Address, error) {
-	var once sync.Once
-	var privateKey *ecdsa.PrivateKey
-	var fromAddress common.Address
-	var err error
-
-	once.Do(func() {
-		privateKey, err = crypto.HexToECDSA(private)
-		if err != nil {
-			err = errors.Wrap(err, "failed to convert hex to ecdsa")
-			return
-		}
-
-		publicKey := privateKey.Public()
-		publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
-		if !ok {
-			err = data.ErrFailedToCastKey
-			return
-		}
-
-		fromAddress = crypto.PubkeyToAddress(*publicKeyECDSA)
-		return
-	})
-
-	return privateKey, fromAddress, nil
 }

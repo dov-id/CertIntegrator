@@ -44,7 +44,6 @@ func (i *indexer) Run(ctx context.Context) {
 
 func (i *indexer) listen(ctx context.Context) error {
 	i.log.WithField("addresses", i.Addresses).Debugf("start listener")
-	defer i.wg.Done()
 
 	block, err := getBlockToStartFrom(i.ContractsQ, i.Addresses, i.Blocks)
 	if err != nil {

@@ -1,6 +1,7 @@
 package indexer
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/dov-id/cert-integrator-svc/contracts"
@@ -95,7 +96,7 @@ func updateContractsDB(contractsQ data.Contracts, list []config.Contract, types 
 	return nil
 }
 
-func prepareIndexerParams(cfg config.Config) (*newIndexerParams, error) {
+func prepareIndexerParams(cfg config.Config, ctx context.Context) (*newIndexerParams, error) {
 	clients, err := InitNetworkClients(cfg.Networks().Networks, cfg.RpcProvider())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to init network clients")
@@ -106,18 +107,27 @@ func prepareIndexerParams(cfg config.Config) (*newIndexerParams, error) {
 		return nil, errors.Wrap(err, "failed to init cert integrator contracts")
 	}
 
-	issuerBlocks, issuerAddresses, err := updAndGetContractsInfo(postgres.NewContractsQ(cfg.DB()), cfg.CertificatesIssuer().List, data.ISSUER)
+	issuerBlocks, issuerAddresses, err := updAndGetContractsInfo(
+		postgres.NewContractsQ(cfg.DB()),
+		cfg.CertificatesIssuer().List,
+		data.ISSUER,
+	)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to update and retrieve certificates issuer contracts info")
 	}
 
-	fabricBlocks, fabricAddresses, err := updAndGetContractsInfo(postgres.NewContractsQ(cfg.DB()), cfg.CertificatesFabric().List, data.FABRIC)
+	fabricBlocks, fabricAddresses, err := updAndGetContractsInfo(
+		postgres.NewContractsQ(cfg.DB()),
+		cfg.CertificatesFabric().List,
+		data.FABRIC,
+	)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to update and retrieve certificates fabric contracts info")
 	}
 
 	return &newIndexerParams{
 		cfg:             cfg,
+		ctx:             ctx,
 		clients:         clients,
 		issuerCh:        make(chan string),
 		certIntegrators: certIntegrators,

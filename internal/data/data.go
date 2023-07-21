@@ -10,7 +10,6 @@ import (
 )
 
 var (
-	ErrNilCancelFunction        = errors.New("ctx cancel function is nil")
 	ErrNoContract               = errors.New("no contract was found")
 	ErrFailedToCastKey          = errors.New("failed to cast public key to ECDSA")
 	ErrFailedToCastInt          = errors.New("failed to cast interface{} to int64")

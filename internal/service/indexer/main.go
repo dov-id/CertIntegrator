@@ -2,7 +2,6 @@ package indexer
 
 import (
 	"context"
-	"sync"
 
 	"github.com/dov-id/cert-integrator-svc/contracts"
 	"github.com/dov-id/cert-integrator-svc/internal/config"
@@ -20,6 +19,8 @@ type Indexer interface {
 }
 
 type indexer struct {
+	Type string
+
 	cfg config.Config
 	log *logan.Entry
 
@@ -30,9 +31,6 @@ type indexer struct {
 	ContractsQ data.Contracts
 	UsersQ     data.Users
 
-	Cancel context.CancelFunc
-	wg     *sync.WaitGroup
-
 	Clients         map[types.Network]*ethclient.Client
 	CertIntegrators map[types.Network]*contracts.CertIntegratorContract
 
@@ -40,6 +38,7 @@ type indexer struct {
 }
 
 type newIndexerParams struct {
+	name            string
 	cfg             config.Config
 	ctx             context.Context
 	issuerCh        chan string
@@ -47,38 +46,27 @@ type newIndexerParams struct {
 	issuerBlocks    []int64
 	fabricAddresses []string
 	fabricBlocks    []int64
-	cancel          context.CancelFunc
-	wg              *sync.WaitGroup
 	clients         map[types.Network]*ethclient.Client
 	certIntegrators map[types.Network]*contracts.CertIntegratorContract
 }
 
 func Run(cfg config.Config, ctx context.Context) {
-	cancelCtx, cancelFn := context.WithCancel(ctx)
-	var wg sync.WaitGroup
-
-	params, err := prepareIndexerParams(cfg)
+	params, err := prepareIndexerParams(cfg, ctx)
 	if err != nil {
 		panic(errors.Wrap(err, "failed to prepare indexer params"))
 	}
 
-	wg.Add(1)
+	params.name = IssuerContract
+	NewIndexer(*params).Run(ctx)
 
-	params.ctx = cancelCtx
-	params.wg = &wg
-	params.cancel = nil
-
-	NewIndexer(*params).Run(cancelCtx)
-
-	params.cancel = cancelFn
-
+	params.name = FabricContract
 	NewIndexer(*params).Run(ctx)
 }
 
 func NewIndexer(params newIndexerParams) Indexer {
 	addresses := params.issuerAddresses
 	blocks := params.issuerBlocks
-	if params.cancel != nil {
+	if params.name == FabricContract {
 		addresses = params.fabricAddresses
 		blocks = params.fabricBlocks
 	}
@@ -91,10 +79,8 @@ func NewIndexer(params newIndexerParams) Indexer {
 		Blocks:          blocks,
 		ContractsQ:      postgres.NewContractsQ(params.cfg.DB().Clone()),
 		UsersQ:          postgres.NewUsersQ(params.cfg.DB().Clone()),
-		Cancel:          params.cancel,
 		Clients:         params.clients,
 		CertIntegrators: params.certIntegrators,
 		dailyStorage:    storage.DailyStorageInstance(params.ctx),
-		wg:              params.wg,
 	}
 }

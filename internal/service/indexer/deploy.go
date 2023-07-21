@@ -73,10 +73,7 @@ func (i *indexer) processNewContract(ctx context.Context, event *contracts.Token
 		return errors.Wrap(err, "failed to create new merkle tree")
 	}
 
-	err = i.recreateIssuerRunner(event.NewTokenContractAddr.Hex())
-	if err != nil {
-		return errors.Wrap(err, "failed to recreate issuers runner")
-	}
+	i.issuerCh <- event.NewTokenContractAddr.Hex()
 
 	err = i.ContractsQ.FilterByAddresses(event.Raw.Address.Hex()).Update(data.ContractToUpdate{
 		Block: &blockNumber,
@@ -85,10 +82,5 @@ func (i *indexer) processNewContract(ctx context.Context, event *contracts.Token
 		return errors.Wrap(err, "failed to update fabric contract")
 	}
 
-	return nil
-}
-
-func (i *indexer) recreateIssuerRunner(newContract string) error {
-	i.issuerCh <- newContract
 	return nil
 }

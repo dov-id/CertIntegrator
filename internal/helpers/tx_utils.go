@@ -4,6 +4,7 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/dov-id/cert-integrator-svc/internal/config"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -11,23 +12,18 @@ import (
 	"gitlab.com/distributed_lab/logan/v3/errors"
 )
 
-func GetAuth(ctx context.Context, client *ethclient.Client, private string) (*bind.TransactOpts, error) {
+func GetAuth(ctx context.Context, client *ethclient.Client, walletCfg *config.WalletCfg) (*bind.TransactOpts, error) {
 	chainID, err := client.ChainID(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get chain id")
 	}
 
-	privateKey, fromAddress, err := GetKeys(private)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get keys")
-	}
-
-	auth, err := bind.NewKeyedTransactorWithChainID(privateKey, chainID)
+	auth, err := bind.NewKeyedTransactorWithChainID(walletCfg.PrivateKey, chainID)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create transaction signer")
 	}
 
-	nonce, err := client.PendingNonceAt(ctx, fromAddress)
+	nonce, err := client.PendingNonceAt(ctx, walletCfg.Address)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get nonce")
 	}
