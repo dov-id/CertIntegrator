@@ -191,12 +191,12 @@ func (i *indexer) updateContractsStates(ctx context.Context, event *contracts.To
 }
 
 func (i *indexer) publish(ctx context.Context, course common.Address, root *merkletree.Hash) error {
-	//for network, client := range i.Clients {
-	//	err := i.sendUpdates(ctx, client, course, root, i.CertIntegrators[network])
-	//	if err != nil {
-	//		return errors.Wrap(err, fmt.Sprintf("failed to publish in `%s`", network))
-	//	}
-	//}
+	for network, client := range i.Clients {
+		err := i.sendUpdates(ctx, client, course, root, i.CertIntegrators[network])
+		if err != nil {
+			return errors.Wrap(err, fmt.Sprintf("failed to publish in `%s`", network))
+		}
+	}
 
 	return nil
 }
