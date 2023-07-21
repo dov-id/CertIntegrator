@@ -2,6 +2,7 @@ package indexer
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 
 	"github.com/dov-id/cert-integrator-svc/contracts"
