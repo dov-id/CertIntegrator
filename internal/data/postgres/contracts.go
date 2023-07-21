@@ -13,6 +13,7 @@ const (
 	contractsTableName     = "contracts"
 	contractsAddressColumn = contractsTableName + ".address"
 	contractsTypeColumn    = contractsTableName + ".type"
+	contractsNameColumn    = contractsTableName + ".name"
 )
 
 type ContractsQ struct {

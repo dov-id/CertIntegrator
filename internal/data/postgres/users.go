@@ -12,6 +12,7 @@ import (
 const (
 	usersTableName     = "users"
 	usersAddressColumn = usersTableName + ".address"
+	usersPubKeyColumn  = usersTableName + ".public_key"
 )
 
 type UsersQ struct {
