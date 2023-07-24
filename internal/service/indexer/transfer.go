@@ -190,13 +190,10 @@ func (i *indexer) updateContractsStates(ctx context.Context, event *contracts.To
 }
 
 func (i *indexer) publish(ctx context.Context, course common.Address, root *merkletree.Hash) error {
-	//TODO: bro, don't forget to remove `if` in loop
 	for network, client := range i.Clients {
-		if network == data.EthereumNetwork {
-			err := i.sendUpdates(ctx, client, course, root, i.CertIntegrators[network])
-			if err != nil {
-				return errors.Wrap(err, fmt.Sprintf("failed to publish in `%s`", network))
-			}
+		err := i.sendUpdates(ctx, client, course, root, i.CertIntegrators[network])
+		if err != nil {
+			return errors.Wrap(err, fmt.Sprintf("failed to publish in `%s`", network))
 		}
 	}
 
