@@ -8,7 +8,6 @@ import (
 	"github.com/dov-id/cert-integrator-svc/internal/config"
 	"github.com/dov-id/cert-integrator-svc/internal/data"
 	"github.com/dov-id/cert-integrator-svc/internal/data/postgres"
-	"github.com/dov-id/cert-integrator-svc/internal/helpers"
 	"github.com/dov-id/cert-integrator-svc/internal/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -52,24 +51,26 @@ func initCertIntegratorContracts(
 	return certIntegratorContracts, nil
 }
 
-func updAndGetContractsInfo(contractsQ data.Contracts, list []config.Contract, types data.ContractType) ([]int64, []string, error) {
+func updAndGetContractsInfo(contractsQ data.Contracts, list []config.Contract, types data.ContractType) (map[string]int64, []string, error) {
 	err := updateContractsDB(contractsQ, list, types)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to update contracts in db")
 	}
-
-	cfgBlocks, cfgAddresses := helpers.SeparateContractArrays(list)
 
 	dbContracts, err := contractsQ.FilterByTypes(types).Select()
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to get contract from database")
 	}
 
-	dbBlocks, dbAddresses := helpers.SeparateDataContractArrays(dbContracts)
+	blocks := make(map[string]int64)
+	addresses := make([]string, len(dbContracts))
 
-	return helpers.RemoveDuplicatesInt64Arr(append(cfgBlocks, dbBlocks...)),
-		helpers.RemoveDuplicatesStringsArr(append(cfgAddresses, dbAddresses...)),
-		nil
+	for i := 0; i < len(dbContracts); i++ {
+		blocks[dbContracts[i].Address] = dbContracts[i].Block
+		addresses[i] = dbContracts[i].Address
+	}
+
+	return blocks, addresses, nil
 }
 
 func updateContractsDB(contractsQ data.Contracts, list []config.Contract, types data.ContractType) error {

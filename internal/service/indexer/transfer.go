@@ -106,10 +106,7 @@ func (i *indexer) handleMint(ctx context.Context, mTree *merkletree.MerkleTree, 
 		Storage: i.dailyStorage,
 		Clients: i.Clients,
 	})
-	if err != nil {
-		if pkgErrors.Is(err, data.ErrNoPublicKey) {
-			return nil
-		}
+	if err != nil && !pkgErrors.Is(err, data.ErrNoPublicKey) {
 		return errors.Wrap(err, "failed to process public key")
 	}
 
@@ -181,6 +178,7 @@ func (i *indexer) updateContractsStates(ctx context.Context, event *contracts.To
 	if err != nil {
 		return errors.Wrap(err, "failed to update last handled block")
 	}
+	i.Blocks[event.Raw.Address.Hex()] = blockNumber
 
 	err = i.publish(ctx, event.Raw.Address, root)
 	if err != nil {
@@ -192,10 +190,13 @@ func (i *indexer) updateContractsStates(ctx context.Context, event *contracts.To
 }
 
 func (i *indexer) publish(ctx context.Context, course common.Address, root *merkletree.Hash) error {
+	//TODO: bro, don't forget to remove `if` in loop
 	for network, client := range i.Clients {
-		err := i.sendUpdates(ctx, client, course, root, i.CertIntegrators[network])
-		if err != nil {
-			return errors.Wrap(err, fmt.Sprintf("failed to publish in `%s`", network))
+		if network == data.EthereumNetwork {
+			err := i.sendUpdates(ctx, client, course, root, i.CertIntegrators[network])
+			if err != nil {
+				return errors.Wrap(err, fmt.Sprintf("failed to publish in `%s`", network))
+			}
 		}
 	}
 

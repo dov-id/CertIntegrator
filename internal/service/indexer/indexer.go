@@ -3,12 +3,12 @@ package indexer
 import (
 	"context"
 	"math/big"
-	"sort"
 	"time"
 
 	"github.com/dov-id/cert-integrator-svc/internal/data"
 	"github.com/dov-id/cert-integrator-svc/internal/helpers"
 	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -45,12 +45,7 @@ func (i *indexer) Run(ctx context.Context) {
 func (i *indexer) listen(ctx context.Context) error {
 	i.log.WithField("addresses", i.Addresses).Debugf("start listener")
 
-	block, err := getBlockToStartFrom(i.ContractsQ, i.Addresses, i.Blocks)
-	if err != nil {
-		return errors.Wrap(err, "failed to get starting block")
-	}
-
-	err = i.processPastEvents(ctx, block, i.Clients[data.EthereumNetwork])
+	err := i.processPastEvents(ctx, i.Clients[data.EthereumNetwork])
 	if err != nil {
 		return errors.Wrap(err, "failed to process past events")
 	}
@@ -61,22 +56,6 @@ func (i *indexer) listen(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-func getBlockToStartFrom(contractsQ data.Contracts, addresses []string, blocks []int64) (*big.Int, error) {
-	dbContracts, err := contractsQ.FilterByAddresses(addresses...).Select()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get contract")
-	}
-
-	for i := range dbContracts {
-		blocks = append(blocks, dbContracts[i].Block)
-	}
-
-	sort.Slice(blocks, func(i, j int) bool { return blocks[i] > blocks[j] })
-
-	// + 1 in order not to handle already handled last block
-	return big.NewInt(blocks[0] + 1), nil
 }
 
 func (i *indexer) handleLogs(ctx context.Context, log types.Log, client *ethclient.Client) error {
@@ -90,36 +69,40 @@ func (i *indexer) handleLogs(ctx context.Context, log types.Log, client *ethclie
 	return nil
 }
 
-func (i *indexer) processPastEvents(ctx context.Context, block *big.Int, client *ethclient.Client) error {
-	i.log.WithFields(map[string]interface{}{"block": block.String(), "addresses": i.Addresses}).Debugf("start processing past events")
+func (i *indexer) processPastEvents(ctx context.Context, client *ethclient.Client) error {
+	i.log.WithField("addresses", i.Addresses).Debugf("start processing past events")
 
-	filterQuery := ethereum.FilterQuery{
-		Addresses: helpers.ConvertStringToAddresses(i.Addresses),
-		FromBlock: block,
-		ToBlock:   nil,
-	}
-
-	oldLogs, err := client.FilterLogs(ctx, filterQuery)
-	if err != nil {
-		return errors.Wrap(err, "failed to filter logs")
-	}
-
-	for _, log := range oldLogs {
-		i.log.WithFields(map[string]interface{}{"block": log.BlockNumber, "address": log.Address.Hex()}).Debugf("processing past event")
-
-		err = i.handleLogs(ctx, log, client)
-		if err != nil {
-			return errors.Wrap(err, "failed to handle log")
+	for k := 0; k < len(i.Addresses); k++ {
+		filterQuery := ethereum.FilterQuery{
+			Addresses: []common.Address{common.HexToAddress(i.Addresses[k])},
+			FromBlock: big.NewInt(i.Blocks[i.Addresses[k]] + 1),
+			ToBlock:   nil,
 		}
 
-		block = big.NewInt(int64(log.BlockNumber))
+		oldLogs, err := client.FilterLogs(ctx, filterQuery)
+		if err != nil {
+			return errors.Wrap(err, "failed to filter logs")
+		}
+
+		for _, log := range oldLogs {
+			i.log.WithFields(map[string]interface{}{"block": log.BlockNumber, "address": log.Address.Hex()}).Debugf("processing past event")
+
+			err = i.handleLogs(ctx, log, client)
+			if err != nil {
+				return errors.Wrap(err, "failed to handle log")
+			}
+
+			i.Blocks[log.Address.Hex()] = int64(log.BlockNumber)
+		}
 	}
 
-	i.log.WithFields(map[string]interface{}{"block": block.String(), "addresses": i.Addresses}).Debugf("finish processing past events")
+	i.log.WithField("addresses", i.Addresses).Debugf("finish processing past events")
 	return nil
 }
 
 func (i *indexer) subscribeAndProcessNewEvents(ctx context.Context, client *ethclient.Client) error {
+	i.log.WithField("addresses", i.Addresses).Debugf("subscribing to new events")
+
 	query := ethereum.FilterQuery{
 		Addresses: helpers.ConvertStringToAddresses(i.Addresses),
 	}

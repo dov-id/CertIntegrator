@@ -40,6 +40,7 @@ func (i *indexer) handleFabricDeployLog(ctx context.Context, eventLog types.Log,
 		if err != nil {
 			return errors.Wrap(err, "failed to update fabric contract")
 		}
+		i.Blocks[event.Raw.Address.Hex()] = blockNumber
 
 		return nil
 	}
@@ -65,6 +66,7 @@ func (i *indexer) processNewContract(ctx context.Context, event *contracts.Token
 	if err != nil {
 		return errors.Wrap(err, "failed to save new contract")
 	}
+	i.Blocks[event.NewTokenContractAddr.Hex()] = blockNumber
 
 	treeStorage := postgres.NewStorage(i.cfg.DB(), newContract.Id)
 
@@ -81,6 +83,7 @@ func (i *indexer) processNewContract(ctx context.Context, event *contracts.Token
 	if err != nil {
 		return errors.Wrap(err, "failed to update fabric contract")
 	}
+	i.Blocks[event.Raw.Address.Hex()] = blockNumber
 
 	return nil
 }

@@ -26,7 +26,7 @@ type indexer struct {
 
 	issuerCh  chan string
 	Addresses []string
-	Blocks    []int64
+	Blocks    map[string]int64
 
 	ContractsQ data.Contracts
 	UsersQ     data.Users
@@ -43,9 +43,9 @@ type newIndexerParams struct {
 	ctx             context.Context
 	issuerCh        chan string
 	issuerAddresses []string
-	issuerBlocks    []int64
+	issuerBlocks    map[string]int64
 	fabricAddresses []string
-	fabricBlocks    []int64
+	fabricBlocks    map[string]int64
 	clients         map[types.Network]*ethclient.Client
 	certIntegrators map[types.Network]*contracts.CertIntegratorContract
 }

@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/dov-id/cert-integrator-svc/internal/data"
-	"github.com/dov-id/cert-integrator-svc/internal/service/api/models"
+	"github.com/dov-id/cert-integrator-svc/internal/service/api/responses"
 	"gitlab.com/distributed_lab/ape"
 	"gitlab.com/distributed_lab/ape/problems"
 )
@@ -18,5 +18,5 @@ func GetCourses(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	ape.Render(w, models.NewCourseListResponse(contracts))
+	ape.Render(w, responses.NewCourseListResponse(contracts))
 }

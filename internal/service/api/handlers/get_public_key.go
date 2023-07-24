@@ -7,8 +7,8 @@ import (
 	"github.com/dov-id/cert-integrator-svc/internal/config"
 	"github.com/dov-id/cert-integrator-svc/internal/data"
 	"github.com/dov-id/cert-integrator-svc/internal/helpers"
-	"github.com/dov-id/cert-integrator-svc/internal/service/api/models"
 	"github.com/dov-id/cert-integrator-svc/internal/service/api/requests"
+	"github.com/dov-id/cert-integrator-svc/internal/service/api/responses"
 	"github.com/dov-id/cert-integrator-svc/internal/service/indexer"
 	"github.com/dov-id/cert-integrator-svc/internal/service/storage"
 	"github.com/ethereum/go-ethereum/common"
@@ -41,7 +41,7 @@ func GetPublicKey(w http.ResponseWriter, r *http.Request) {
 
 	if user != nil {
 		w.WriteHeader(http.StatusOK)
-		ape.Render(w, models.NewUserResponse(*user))
+		ape.Render(w, responses.NewUserResponse(*user))
 		return
 	}
 
@@ -70,7 +70,7 @@ func GetPublicKey(w http.ResponseWriter, r *http.Request) {
 			}
 
 			w.WriteHeader(http.StatusNotFound)
-			ape.Render(w, models.NewAttemptsResponse(amount))
+			ape.Render(w, responses.NewAttemptsResponse(amount))
 			return
 		}
 		Log(r).WithError(err).Error("failed to process public key")
@@ -91,7 +91,7 @@ func GetPublicKey(w http.ResponseWriter, r *http.Request) {
 
 	if user != nil {
 		w.WriteHeader(http.StatusOK)
-		ape.Render(w, models.NewUserResponse(*user))
+		ape.Render(w, responses.NewUserResponse(*user))
 		return
 	}
 
@@ -103,7 +103,7 @@ func GetPublicKey(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNotFound)
-	ape.Render(w, models.NewAttemptsResponse(amount))
+	ape.Render(w, responses.NewAttemptsResponse(amount))
 	return
 }
 

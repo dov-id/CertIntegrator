@@ -1,4 +1,4 @@
-package models
+package responses
 
 import "github.com/dov-id/cert-integrator-svc/resources"
 

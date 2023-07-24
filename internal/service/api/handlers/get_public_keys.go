@@ -6,8 +6,8 @@ import (
 
 	"github.com/dov-id/cert-integrator-svc/internal/data"
 	"github.com/dov-id/cert-integrator-svc/internal/data/postgres"
-	"github.com/dov-id/cert-integrator-svc/internal/service/api/models"
 	"github.com/dov-id/cert-integrator-svc/internal/service/api/requests"
+	"github.com/dov-id/cert-integrator-svc/internal/service/api/responses"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/iden3/go-merkletree-sql/v2"
 	"gitlab.com/distributed_lab/ape"
@@ -45,6 +45,7 @@ func GetPublicKeys(w http.ResponseWriter, r *http.Request) {
 
 	if contract == nil {
 		Log(r).WithError(err).Errorf("no course with address `%s`", course)
+		w.WriteHeader(http.StatusNotFound)
 		ape.RenderErr(w, problems.NotFound())
 		return
 	}
@@ -72,13 +73,7 @@ func GetPublicKeys(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-		keyBig, err := merkletree.NewBigIntFromHashBytes(common.HexToAddress(users[i].Address).Hash().Bytes())
-		if err != nil {
-			Log(r).WithError(err).Error("failed to convert node key to hash")
-			ape.RenderErr(w, problems.InternalError())
-			return
-		}
-
+		keyBig := common.HexToAddress(users[i].Address).Big()
 		//just check if user in tree (if user is participant)
 		_, _, _, err = mTree.Get(r.Context(), keyBig)
 		if err == merkletree.ErrKeyNotFound {
@@ -94,6 +89,6 @@ func GetPublicKeys(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	ape.Render(w, models.NewUserListResponse(participants))
+	ape.Render(w, responses.NewUserListResponse(participants))
 	return
 }
