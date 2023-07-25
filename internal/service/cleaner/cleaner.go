@@ -20,9 +20,9 @@ func (c *cleaner) Run(ctx context.Context) {
 		c.log,
 		serviceName,
 		c.listen,
-		c.cfg.Timeouts().Indexer,
-		c.cfg.Timeouts().Indexer,
-		c.cfg.Timeouts().Indexer,
+		c.cfg.Timeouts().Cleaner,
+		c.cfg.Timeouts().Cleaner,
+		c.cfg.Timeouts().Cleaner,
 	)
 }
 

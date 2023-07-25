@@ -178,6 +178,8 @@ func recoverPubKeyFromTx(transaction *types.Transaction, signer types.Signer) ([
 	v, r, s := transaction.RawSignatureValues()
 
 	if v.BitLen() > 8 {
+		fmt.Println(transaction.Hash().Hex())
+
 		return nil, data.ErrWrongSignatureValue
 	}
 

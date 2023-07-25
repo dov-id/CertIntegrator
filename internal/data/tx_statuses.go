@@ -17,5 +17,5 @@ type TxStatuses interface {
 type TxStatus struct {
 	TxId         int64  `json:"tx_id" db:"tx_id" structs:"tx_id"`
 	Network      string `json:"network" db:"network" structs:"network"`
-	CountNetwork string `json:"count_network" db:"count_network"`
+	CountNetwork string `json:",omitempty" db:"count_network" structs:",omitempty"`
 }

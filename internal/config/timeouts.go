@@ -11,6 +11,7 @@ import (
 type TimeoutsCfg struct {
 	Indexer time.Duration `figure:"indexer,required"`
 	Sender  time.Duration `figure:"sender,required"`
+	Cleaner time.Duration `figure:"cleaner,required"`
 }
 
 func (c *config) Timeouts() *TimeoutsCfg {

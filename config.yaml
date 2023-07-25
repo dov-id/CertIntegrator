@@ -55,6 +55,7 @@ rpc_provider:
 timeouts:
   indexer: 30s
   sender: 30s
+  cleaner: 30s
 
 listener:
   addr: :8000
