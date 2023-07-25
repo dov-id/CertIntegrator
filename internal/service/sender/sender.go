@@ -44,7 +44,7 @@ func (s *sender) listen(ctx context.Context) error {
 }
 
 func (s *sender) processTxs(ctx context.Context) error {
-	txs, err := s.TransactionsQ.FilterByStatuses(data.CREATED).Select()
+	txs, err := s.TransactionsQ.FilterByStatuses(data.PENDING).Select()
 	if err != nil {
 		return errors.Wrap(err, "failed to select transactions")
 	}
@@ -79,6 +79,7 @@ func (s *sender) processTxs(ctx context.Context) error {
 
 func (s *sender) publishStates(ctx context.Context, params updateStateParams) error {
 	for network, client := range s.Clients {
+		params.network = network
 		params.client = client
 		params.certIntegrator = s.CertIntegrators[network]
 
@@ -136,11 +137,15 @@ func (s *sender) waitForTransactionMined(ctx context.Context, transaction *types
 			panic(errors.Wrap(err, "failed to mine transaction"))
 		}
 
-		//TODO: fix it, because it causes panic
-		//err = s.TransactionsQ.FilterByIds(params.ids...).Delete()
-		//if err != nil {
-		//	panic(errors.Wrap(err, "failed to delete mined txs"))
-		//}
+		for _, id := range params.ids {
+			err = s.TxStatusesQ.Insert(data.TxStatus{
+				TxId:    id,
+				Network: params.network.String(),
+			})
+			if err != nil {
+				panic(errors.Wrap(err, "failed to insert tx status"))
+			}
+		}
 
 		s.log.WithField("tx", transaction.Hash().Hex()).Debugf("was mined")
 	}()

@@ -79,7 +79,7 @@ func (q TransactionsQ) Update(transaction data.TransactionToUpdate) error {
 	return q.db.Exec(q.updateBuilder)
 }
 
-func (q TransactionsQ) FilterByStatuses(statuses ...data.TxStatus) data.Transactions {
+func (q TransactionsQ) FilterByStatuses(statuses ...data.TransactionStatus) data.Transactions {
 	equal := sq.Eq{transactionsStatusColumn: statuses}
 
 	q.selectBuilder = q.selectBuilder.Where(equal)

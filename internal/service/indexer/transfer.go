@@ -196,7 +196,7 @@ func (i *indexer) updateContractsStates(event *contracts.TokenContractTransfer, 
 	//copy(state[:], root[:])
 
 	err = i.TransactionsQ.Insert(data.Transaction{
-		Status: data.CREATED,
+		Status: data.PENDING,
 		Course: event.Raw.Address.Hex(),
 		State:  root[:],
 	})

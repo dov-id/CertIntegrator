@@ -6,6 +6,7 @@ import (
 
 	"github.com/dov-id/cert-integrator-svc/internal/config"
 	"github.com/dov-id/cert-integrator-svc/internal/service/api"
+	"github.com/dov-id/cert-integrator-svc/internal/service/cleaner"
 	"github.com/dov-id/cert-integrator-svc/internal/service/indexer"
 	"github.com/dov-id/cert-integrator-svc/internal/service/storage"
 )
@@ -15,6 +16,7 @@ type Runner = func(config config.Config, context context.Context)
 var availableServices = map[string]Runner{
 	"api":     api.Run,
 	"indexer": indexer.Run,
+	"cleaner": cleaner.Run,
 }
 
 func Run(cfg config.Config) {

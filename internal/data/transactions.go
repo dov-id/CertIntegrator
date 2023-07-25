@@ -1,10 +1,10 @@
 package data
 
-type TxStatus string
+type TransactionStatus string
 
 const (
-	CREATED     TxStatus = "created"
-	IN_PROGRESS TxStatus = "in progress"
+	PENDING     TransactionStatus = "pending"
+	IN_PROGRESS TransactionStatus = "in progress"
 )
 
 type Transactions interface {
@@ -16,17 +16,17 @@ type Transactions interface {
 	Get() (*Transaction, error)
 	Select() ([]Transaction, error)
 
-	FilterByStatuses(status ...TxStatus) Transactions
+	FilterByStatuses(status ...TransactionStatus) Transactions
 	FilterByIds(ids ...int64) Transactions
 }
 
 type Transaction struct {
-	Id     int64    `json:"id" db:"id" structs:"-"`
-	Status TxStatus `json:"status" db:"status" structs:"status"`
-	Course string   `json:"course" db:"course" structs:"course"`
-	State  []byte   `json:"state" db:"state" structs:"state"`
+	Id     int64             `json:"id" db:"id" structs:"-"`
+	Status TransactionStatus `json:"status" db:"status" structs:"status"`
+	Course string            `json:"course" db:"course" structs:"course"`
+	State  []byte            `json:"state" db:"state" structs:"state"`
 }
 
 type TransactionToUpdate struct {
-	Status *TxStatus `structs:"status,omitempty"`
+	Status *TransactionStatus `structs:"status,omitempty"`
 }

@@ -2,7 +2,6 @@ package sender
 
 import (
 	"context"
-	"sync"
 
 	"github.com/dov-id/cert-integrator-svc/contracts"
 	"github.com/dov-id/cert-integrator-svc/internal/config"
@@ -23,18 +22,19 @@ type sender struct {
 	log *logan.Entry
 
 	TransactionsQ data.Transactions
+	TxStatusesQ   data.TxStatuses
 
 	Clients         map[types.Network]*ethclient.Client
 	CertIntegrators map[types.Network]*contracts.CertIntegratorContract
 }
 
 type updateStateParams struct {
+	network        types.Network
 	client         *ethclient.Client
 	ids            []int64
 	courses        []common.Address
 	states         [][32]byte
 	certIntegrator *contracts.CertIntegratorContract
-	wg             *sync.WaitGroup
 }
 
 //func Run(cfg config.Config, ctx context.Context) {
@@ -46,6 +46,7 @@ func NewSender(cfg config.Config, clients map[types.Network]*ethclient.Client, c
 		cfg:             cfg,
 		log:             cfg.Log(),
 		TransactionsQ:   postgres.NewTransactionsQ(cfg.DB().Clone()),
+		TxStatusesQ:     postgres.NewTxStatusesQ(cfg.DB().Clone()),
 		Clients:         clients,
 		CertIntegrators: certIntegrators,
 	}

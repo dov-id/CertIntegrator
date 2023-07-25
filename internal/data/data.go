@@ -26,7 +26,8 @@ var (
 )
 
 const (
-	MaxMTreeLevel = 64
+	MaxMTreeLevel  = 64
+	NetworksAmount = 3
 )
 
 const (
