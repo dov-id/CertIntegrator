@@ -18,6 +18,7 @@ func (s *Router) router() chi.Router {
 			handlers.CtxCfg(s.cfg),
 			handlers.CtxParentCtx(s.ctx),
 			handlers.CtxContractsQ(postgres.NewContractsQ(s.cfg.DB().Clone())),
+			handlers.CtxParticipantsQ(postgres.NewParticipantsQ(s.cfg.DB().Clone())),
 			handlers.CtxUsersQ(postgres.NewUsersQ(s.cfg.DB().Clone())),
 		),
 	)

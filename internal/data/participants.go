@@ -3,7 +3,7 @@ package data
 type Participants interface {
 	New() Participants
 
-	Upsert(participant Participant) error
+	Insert(participant Participant) error
 	Delete() error
 	Get() (*Participant, error)
 	Select() ([]Participant, error)

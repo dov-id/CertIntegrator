@@ -2,7 +2,6 @@ package indexer
 
 import (
 	"context"
-	"fmt"
 	"math/big"
 
 	"github.com/dov-id/cert-integrator-svc/contracts"
@@ -58,6 +57,21 @@ func (i *indexer) handleIssuerTransferLog(ctx context.Context, eventLog types.Lo
 		err = i.handleMint(ctx, mTree, event, int64(event.Raw.BlockNumber))
 		if err != nil {
 			return errors.Wrap(err, "failed to handle mint event")
+		}
+
+		user, err := i.UsersQ.FilterByAddresses(event.To.Hex()).Get()
+		if err != nil {
+			return errors.Wrap(err, "failed to get user")
+		}
+
+		if user != nil {
+			err = i.ParticipantsQ.Insert(data.Participant{
+				ContractId:  int64(contract.Id),
+				UserAddress: event.To.Hex(),
+			})
+			if err != nil {
+				return errors.Wrap(err, "failed to insert participant")
+			}
 		}
 		return nil
 	}
@@ -190,12 +204,12 @@ func (i *indexer) updateContractsStates(ctx context.Context, event *contracts.To
 }
 
 func (i *indexer) publish(ctx context.Context, course common.Address, root *merkletree.Hash) error {
-	for network, client := range i.Clients {
-		err := i.sendUpdates(ctx, client, course, root, i.CertIntegrators[network])
-		if err != nil {
-			return errors.Wrap(err, fmt.Sprintf("failed to publish in `%s`", network))
-		}
-	}
+	//for network, client := range i.Clients {
+	//	err := i.sendUpdates(ctx, client, course, root, i.CertIntegrators[network])
+	//	if err != nil {
+	//		return errors.Wrap(err, fmt.Sprintf("failed to publish in `%s`", network))
+	//	}
+	//}
 
 	return nil
 }

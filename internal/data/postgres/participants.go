@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"database/sql"
+	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/dov-id/cert-integrator-svc/internal/data"
@@ -35,9 +36,9 @@ func (q ParticipantsQ) New() data.Participants {
 	return NewParticipantsQ(q.db.Clone())
 }
 
-func (q ParticipantsQ) Upsert(participant data.Participant) error {
+func (q ParticipantsQ) Insert(participant data.Participant) error {
 	query := sq.Insert(participantsTableName).SetMap(structs.Map(participant)).
-		Suffix("ON CONFLICT (address) DO NOTHING")
+		Suffix("ON CONFLICT DO NOTHING")
 
 	return q.db.Exec(query)
 }
@@ -70,7 +71,7 @@ func (q ParticipantsQ) Get() (*data.Participant, error) {
 
 func (q ParticipantsQ) Select() ([]data.Participant, error) {
 	var result []data.Participant
-
+	fmt.Println(q.selectBuilder.MustSql())
 	return result, q.db.Select(&result, q.selectBuilder)
 }
 

@@ -15,6 +15,7 @@ const (
 	logCtxKey ctxKey = iota
 	contractsCtxKey
 	usersCtxKey
+	participantsCtxKey
 	CfgCtxKey
 	ParentCtxCtxKey
 )
@@ -46,6 +47,16 @@ func UsersQ(r *http.Request) data.Users {
 func CtxUsersQ(entry data.Users) func(context.Context) context.Context {
 	return func(ctx context.Context) context.Context {
 		return context.WithValue(ctx, usersCtxKey, entry)
+	}
+}
+
+func ParticipantsQ(r *http.Request) data.Participants {
+	return r.Context().Value(participantsCtxKey).(data.Participants).New()
+}
+
+func CtxParticipantsQ(entry data.Participants) func(context.Context) context.Context {
+	return func(ctx context.Context) context.Context {
+		return context.WithValue(ctx, participantsCtxKey, entry)
 	}
 }
 

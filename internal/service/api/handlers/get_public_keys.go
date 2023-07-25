@@ -34,7 +34,6 @@ func GetPublicKeys(w http.ResponseWriter, r *http.Request) {
 		ape.RenderErr(w, problems.BadRequest(err)...)
 		return
 	}
-	signer := *request.Signer
 
 	contract, err := ContractsQ(r).FilterByAddresses(course).Get()
 	if err != nil {
@@ -68,8 +67,25 @@ func GetPublicKeys(w http.ResponseWriter, r *http.Request) {
 	var participants = make([]data.User, 0)
 
 	//TODO: make table `participants`, that will be store `user - course`
+	// 		talk about the problem, when pubkey wasn't found in indexer runner
+	// 		and we won't have ability to get courses for this user in `get_public_key`
+	//		endpoint, so may be such simple checking is the best variant ...
+	//tmp, err := ParticipantsQ(r).WithUsers().FilterByContractId(int64(contract.Id)).Select()
+	//if err != nil {
+	//	Log(r).WithError(err).Error("failed to get participants")
+	//	ape.RenderErr(w, problems.InternalError())
+	//	return
+	//}
+	//for _, participant := range tmp {
+	//	if strings.ToLower(participant.Address) == strings.ToLower(*request.Signer) {
+	//		continue
+	//	}
+	//	participants = append(participants, data.User{Address: participant.Address, PublicKey: participant.PublicKey})
+	//}
+
 	for i := 0; i < len(users); i++ {
-		if strings.ToLower(users[i].Address) == strings.ToLower(signer) {
+
+		if strings.ToLower(users[i].Address) == strings.ToLower(*request.Signer) {
 			continue
 		}
 

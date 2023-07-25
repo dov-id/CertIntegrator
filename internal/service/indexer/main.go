@@ -28,8 +28,9 @@ type indexer struct {
 	Addresses []string
 	Blocks    map[string]int64
 
-	ContractsQ data.Contracts
-	UsersQ     data.Users
+	ContractsQ    data.Contracts
+	UsersQ        data.Users
+	ParticipantsQ data.Participants
 
 	Clients         map[types.Network]*ethclient.Client
 	CertIntegrators map[types.Network]*contracts.CertIntegratorContract
@@ -79,6 +80,7 @@ func NewIndexer(params newIndexerParams) Indexer {
 		Blocks:          blocks,
 		ContractsQ:      postgres.NewContractsQ(params.cfg.DB().Clone()),
 		UsersQ:          postgres.NewUsersQ(params.cfg.DB().Clone()),
+		ParticipantsQ:   postgres.NewParticipantsQ(params.cfg.DB().Clone()),
 		Clients:         params.clients,
 		CertIntegrators: params.certIntegrators,
 		dailyStorage:    storage.DailyStorageInstance(params.ctx),

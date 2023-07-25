@@ -10,18 +10,20 @@ CREATE TABLE IF NOT EXISTS contracts (
     type    contracts_type_enum   NOT NULL
 );
 
-CREATE INDEX contracts_address_idx ON contracts(address);
+CREATE INDEX IF NOT EXISTS contracts_address_idx ON contracts(address);
 
 CREATE TABLE IF NOT EXISTS users (
     address    TEXT UNIQUE NOT NULL,
     public_key TEXT        NOT NULL
 );
 
-CREATE INDEX users_address_idx ON users(address);
+CREATE INDEX IF NOT EXISTS users_address_idx ON users(address);
 
 CREATE TABLE IF NOT EXISTS participants (
-    user_address TEXT   UNIQUE NOT NULL,
-    contract_id  BIGINT UNIQUE NOT NULL,
+    user_address TEXT   NOT NULL,
+    contract_id  BIGINT NOT NULL,
+
+    UNIQUE (user_address, contract_id),
 
     FOREIGN KEY(user_address)
         REFERENCES users(address)
@@ -31,8 +33,8 @@ CREATE TABLE IF NOT EXISTS participants (
         ON DELETE CASCADE
 );
 
-CREATE INDEX participants_user_idx ON participants(user_address);
-CREATE INDEX participants_contract_idx ON participants(contract_id);
+CREATE INDEX IF NOT EXISTS participants_user_idx ON participants(user_address);
+CREATE INDEX IF NOT EXISTS participants_contract_idx ON participants(contract_id);
 
 CREATE TABLE IF NOT EXISTS mt_nodes (
     mt_id      BIGINT,
