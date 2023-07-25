@@ -8,8 +8,6 @@ import (
 	"github.com/dov-id/cert-integrator-svc/internal/data"
 	"github.com/dov-id/cert-integrator-svc/internal/data/postgres"
 	"github.com/dov-id/cert-integrator-svc/internal/helpers"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/iden3/go-merkletree-sql/v2"
@@ -99,14 +97,14 @@ func (i *indexer) handleTransfer(ctx context.Context, mTree *merkletree.MerkleTr
 			return errors.Wrap(err, "failed to fully delete key")
 		}
 
-		return i.updateContractsStates(ctx, event, blockNumber, mTree.Root(), "finish handling transfer event")
+		return i.updateContractsStates(event, blockNumber, mTree.Root(), "finish handling transfer event")
 	}
 	_, err = mTree.Update(ctx, receiver, big.NewInt(value))
 	if err != nil {
 		return errors.Wrap(err, "failed to update leaf in merkle tree")
 	}
 
-	return i.updateContractsStates(ctx, event, blockNumber, mTree.Root(), "finish handling transfer event")
+	return i.updateContractsStates(event, blockNumber, mTree.Root(), "finish handling transfer event")
 }
 
 func (i *indexer) handleMint(ctx context.Context, mTree *merkletree.MerkleTree, event *contracts.TokenContractTransfer, blockNumber int64) error {
@@ -135,7 +133,7 @@ func (i *indexer) handleMint(ctx context.Context, mTree *merkletree.MerkleTree, 
 			return errors.Wrap(err, "failed to add new leaf in merkle tree")
 		}
 
-		return i.updateContractsStates(ctx, event, blockNumber, mTree.Root(), "finish handling mint event")
+		return i.updateContractsStates(event, blockNumber, mTree.Root(), "finish handling mint event")
 	}
 
 	value := leafValue.Int64() + 1
@@ -144,7 +142,7 @@ func (i *indexer) handleMint(ctx context.Context, mTree *merkletree.MerkleTree, 
 		return errors.Wrap(err, "failed to update leaf in merkle tree")
 	}
 
-	return i.updateContractsStates(ctx, event, blockNumber, mTree.Root(), "finish handling mint event")
+	return i.updateContractsStates(event, blockNumber, mTree.Root(), "finish handling mint event")
 }
 
 func (i *indexer) completelyDeleteKey(ctx context.Context, mTree *merkletree.MerkleTree, event *contracts.TokenContractTransfer, treeStorage *postgres.Storage) error {
@@ -185,7 +183,7 @@ func (i *indexer) completelyDeleteKey(ctx context.Context, mTree *merkletree.Mer
 	return nil
 }
 
-func (i *indexer) updateContractsStates(ctx context.Context, event *contracts.TokenContractTransfer, blockNumber int64, root *merkletree.Hash, msg string) error {
+func (i *indexer) updateContractsStates(event *contracts.TokenContractTransfer, blockNumber int64, root *merkletree.Hash, msg string) error {
 	err := i.ContractsQ.FilterByAddresses(event.Raw.Address.Hex()).Update(data.ContractToUpdate{
 		Block: &blockNumber,
 	})
@@ -194,55 +192,18 @@ func (i *indexer) updateContractsStates(ctx context.Context, event *contracts.To
 	}
 	i.Blocks[event.Raw.Address.Hex()] = blockNumber
 
-	err = i.publish(ctx, event.Raw.Address, root)
+	//var state [32]byte
+	//copy(state[:], root[:])
+
+	err = i.TransactionsQ.Insert(data.Transaction{
+		Status: data.CREATED,
+		Course: event.Raw.Address.Hex(),
+		State:  root[:],
+	})
 	if err != nil {
-		return errors.Wrap(err, "failed to publish")
+		return errors.Wrap(err, "failed to insert transaction")
 	}
 
 	i.log.WithField("address", event.Raw.Address.Hex()).Debugf(msg)
-	return nil
-}
-
-func (i *indexer) publish(ctx context.Context, course common.Address, root *merkletree.Hash) error {
-	//for network, client := range i.Clients {
-	//	err := i.sendUpdates(ctx, client, course, root, i.CertIntegrators[network])
-	//	if err != nil {
-	//		return errors.Wrap(err, fmt.Sprintf("failed to publish in `%s`", network))
-	//	}
-	//}
-
-	return nil
-}
-
-func (i *indexer) sendUpdates(ctx context.Context, client *ethclient.Client, course common.Address, root *merkletree.Hash, certIntegrator *contracts.CertIntegratorContract) error {
-	auth, err := helpers.GetAuth(ctx, client, i.cfg.Wallet())
-	if err != nil {
-		return errors.Wrap(err, "failed to get auth options")
-	}
-
-	var state [32]byte
-	copy(state[:], root[:])
-
-	err = i.sendUpdateCourseState(ctx, client, certIntegrator, auth, course, state)
-	if err != nil {
-		return errors.Wrap(err, "failed to update course state")
-	}
-
-	return nil
-}
-
-func (i *indexer) sendUpdateCourseState(ctx context.Context, client *ethclient.Client, certIntegrator *contracts.CertIntegratorContract, auth *bind.TransactOpts, course common.Address, state [32]byte) error {
-	transaction, err := certIntegrator.UpdateCourseState(auth, []common.Address{course}, [][32]byte{state})
-	if err != nil {
-		if pkgErrors.Is(err, data.ErrReplacementTxUnderpriced) {
-			auth.Nonce = big.NewInt(auth.Nonce.Int64() + 1)
-			return i.sendUpdateCourseState(ctx, client, certIntegrator, auth, course, state)
-		}
-
-		return errors.Wrap(err, "failed to update course state")
-	}
-
-	helpers.WaitForTransactionMined(client, transaction, ctx, i.log)
-
 	return nil
 }

@@ -14,6 +14,7 @@ type Config interface {
 	types.Copuser
 	comfig.Listenerer
 
+	Timeouts() *TimeoutsCfg
 	PublicKeyRetriever() *PublicKeyRetrieverCfg
 	Networks() *NetworksCfg
 	Wallet() *WalletCfg
@@ -33,6 +34,7 @@ type config struct {
 	publicKeyRetriever     comfig.Once
 	networks               comfig.Once
 	wallet                 comfig.Once
+	timeouts               comfig.Once
 	rpcProvider            comfig.Once
 	certificatesIssuer     comfig.Once
 	certificatesFabric     comfig.Once

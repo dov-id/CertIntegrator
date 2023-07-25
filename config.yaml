@@ -52,6 +52,10 @@ wallet:
 rpc_provider:
   api_key:
 
+timeouts:
+  indexer: 30s
+  sender: 30s
+
 listener:
   addr: :8000
 

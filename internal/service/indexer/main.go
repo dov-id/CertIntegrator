@@ -7,6 +7,7 @@ import (
 	"github.com/dov-id/cert-integrator-svc/internal/config"
 	"github.com/dov-id/cert-integrator-svc/internal/data"
 	"github.com/dov-id/cert-integrator-svc/internal/data/postgres"
+	"github.com/dov-id/cert-integrator-svc/internal/service/sender"
 	"github.com/dov-id/cert-integrator-svc/internal/service/storage"
 	"github.com/dov-id/cert-integrator-svc/internal/types"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -31,6 +32,7 @@ type indexer struct {
 	ContractsQ    data.Contracts
 	UsersQ        data.Users
 	ParticipantsQ data.Participants
+	TransactionsQ data.Transactions
 
 	Clients         map[types.Network]*ethclient.Client
 	CertIntegrators map[types.Network]*contracts.CertIntegratorContract
@@ -62,6 +64,9 @@ func Run(cfg config.Config, ctx context.Context) {
 
 	params.name = FabricContract
 	NewIndexer(*params).Run(ctx)
+
+	//TODO: is it okay to run runner from this runner? It's for not initializing contracts and clients twice
+	sender.NewSender(cfg, params.clients, params.certIntegrators).Run(ctx)
 }
 
 func NewIndexer(params newIndexerParams) Indexer {
@@ -81,6 +86,7 @@ func NewIndexer(params newIndexerParams) Indexer {
 		ContractsQ:      postgres.NewContractsQ(params.cfg.DB().Clone()),
 		UsersQ:          postgres.NewUsersQ(params.cfg.DB().Clone()),
 		ParticipantsQ:   postgres.NewParticipantsQ(params.cfg.DB().Clone()),
+		TransactionsQ:   postgres.NewTransactionsQ(params.cfg.DB().Clone()),
 		Clients:         params.clients,
 		CertIntegrators: params.certIntegrators,
 		dailyStorage:    storage.DailyStorageInstance(params.ctx),

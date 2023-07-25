@@ -66,10 +66,6 @@ func GetPublicKeys(w http.ResponseWriter, r *http.Request) {
 
 	var participants = make([]data.User, 0)
 
-	//TODO: make table `participants`, that will be store `user - course`
-	// 		talk about the problem, when pubkey wasn't found in indexer runner
-	// 		and we won't have ability to get courses for this user in `get_public_key`
-	//		endpoint, so may be such simple checking is the best variant ...
 	//tmp, err := ParticipantsQ(r).WithUsers().FilterByContractId(int64(contract.Id)).Select()
 	//if err != nil {
 	//	Log(r).WithError(err).Error("failed to get participants")

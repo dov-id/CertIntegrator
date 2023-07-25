@@ -26,8 +26,7 @@ var (
 )
 
 const (
-	MaxMTreeLevel  = 64
-	IndexerTimeout = 30
+	MaxMTreeLevel = 64
 )
 
 const (

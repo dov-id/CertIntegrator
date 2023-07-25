@@ -2,7 +2,6 @@ package postgres
 
 import (
 	"database/sql"
-	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/dov-id/cert-integrator-svc/internal/data"
@@ -71,7 +70,7 @@ func (q ParticipantsQ) Get() (*data.Participant, error) {
 
 func (q ParticipantsQ) Select() ([]data.Participant, error) {
 	var result []data.Participant
-	fmt.Println(q.selectBuilder.MustSql())
+
 	return result, q.db.Select(&result, q.selectBuilder)
 }
 

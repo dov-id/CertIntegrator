@@ -3,7 +3,6 @@ package indexer
 import (
 	"context"
 	"math/big"
-	"time"
 
 	"github.com/dov-id/cert-integrator-svc/internal/data"
 	"github.com/dov-id/cert-integrator-svc/internal/helpers"
@@ -36,9 +35,9 @@ func (i *indexer) Run(ctx context.Context) {
 		i.log,
 		serviceName,
 		i.listen,
-		data.IndexerTimeout*time.Second,
-		data.IndexerTimeout*time.Second,
-		data.IndexerTimeout*time.Second,
+		i.cfg.Timeouts().Indexer,
+		i.cfg.Timeouts().Indexer,
+		i.cfg.Timeouts().Indexer,
 	)
 }
 

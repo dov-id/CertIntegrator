@@ -1,6 +1,7 @@
 -- +migrate Up
 
 CREATE TYPE contracts_type_enum AS enum ('fabric', 'issuer');
+CREATE TYPE tx_status_enum AS enum ('created', 'in progress');
 
 CREATE TABLE IF NOT EXISTS contracts (
     id      BIGSERIAL PRIMARY KEY,
@@ -36,6 +37,15 @@ CREATE TABLE IF NOT EXISTS participants (
 CREATE INDEX IF NOT EXISTS participants_user_idx ON participants(user_address);
 CREATE INDEX IF NOT EXISTS participants_contract_idx ON participants(contract_id);
 
+CREATE TABLE IF NOT EXISTS transactions (
+    id       BIGSERIAL      PRIMARY KEY,
+    status   tx_status_enum              NOT NULL,
+    course   TEXT                        NOT NULL,
+    state    BYTEA                       NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS transactions_type_idx ON transactions(status);
+
 CREATE TABLE IF NOT EXISTS mt_nodes (
     mt_id      BIGINT,
     key        BYTEA,
@@ -61,6 +71,9 @@ CREATE TABLE IF NOT EXISTS mt_roots (
 DROP TABLE IF EXISTS mt_roots;
 DROP TABLE IF EXISTS mt_nodes;
 
+DROP INDEX IF EXISTS transactions_type_idx;
+DROP TABLE IF EXISTS transactions;
+
 DROP INDEX IF EXISTS participants_user_idx;
 DROP INDEX IF EXISTS participants_contract_idx;
 DROP TABLE IF EXISTS participants;
@@ -70,4 +83,6 @@ DROP TABLE IF EXISTS users;
 
 DROP INDEX IF EXISTS contracts_address_idx;
 DROP TABLE IF EXISTS contracts;
+
+DROP TYPE IF EXISTS tx_status_enum;
 DROP TYPE IF EXISTS contracts_type_enum;
