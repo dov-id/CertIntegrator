@@ -78,10 +78,6 @@ DROP INDEX IF EXISTS tx_statuses_tx_id_idx;
 DROP INDEX IF EXISTS transactions_type_idx;
 DROP TABLE IF EXISTS transactions;
 
-DROP INDEX IF EXISTS participants_user_idx;
-DROP INDEX IF EXISTS participants_contract_idx;
-DROP TABLE IF EXISTS participants;
-
 DROP INDEX IF EXISTS users_address_idx;
 DROP TABLE IF EXISTS users;
 
