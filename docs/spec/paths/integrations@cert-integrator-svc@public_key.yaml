@@ -20,15 +20,6 @@ get:
     '400':
       description: Bad request.
     '404':
-      description: Not found. In case if user public key wasn't found the number of last attempts to the current day
-        returned
-      content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              data:
-                type: object
-                $ref: '#/components/schemas/Attempts'
+      description: Not found.
     '500':
       description: Internal server error.

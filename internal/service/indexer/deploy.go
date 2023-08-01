@@ -25,7 +25,7 @@ func (i *indexer) handleFabricDeployLog(ctx context.Context, eventLog types.Log,
 		return errors.Wrap(err, "failed to parse transfer event data")
 	}
 
-	contract, err := i.ContractsQ.FilterByAddresses(event.NewTokenContractAddr.Hex()).Get()
+	contract, err := i.MasterQ.ContractsQ().FilterByAddresses(event.NewTokenContractAddr.Hex()).Get()
 	if err != nil {
 		return errors.Wrap(err, "failed to get contract")
 	}
@@ -34,7 +34,7 @@ func (i *indexer) handleFabricDeployLog(ctx context.Context, eventLog types.Log,
 		i.log.WithField("address", contract.Address).Debugf("contract already exists")
 
 		blockNumber := int64(event.Raw.BlockNumber)
-		err = i.ContractsQ.FilterByAddresses(event.Raw.Address.Hex()).Update(data.ContractToUpdate{
+		err = i.MasterQ.ContractsQ().FilterByAddresses(event.Raw.Address.Hex()).Update(data.ContractToUpdate{
 			Block: &blockNumber,
 		})
 		if err != nil {
@@ -57,11 +57,11 @@ func (i *indexer) handleFabricDeployLog(ctx context.Context, eventLog types.Log,
 func (i *indexer) processNewContract(ctx context.Context, event *contracts.TokenFactoryContractTokenContractDeployed) error {
 	blockNumber := int64(event.Raw.BlockNumber)
 
-	newContract, err := i.ContractsQ.Insert(data.Contract{
+	newContract, err := i.MasterQ.ContractsQ().Insert(data.Contract{
 		Name:    event.TokenContractParams.TokenName,
 		Address: event.NewTokenContractAddr.Hex(),
 		Block:   blockNumber,
-		Type:    data.ISSUER,
+		Type:    data.Issuer,
 	})
 	if err != nil {
 		return errors.Wrap(err, "failed to save new contract")
@@ -77,7 +77,7 @@ func (i *indexer) processNewContract(ctx context.Context, event *contracts.Token
 
 	i.issuerCh <- event.NewTokenContractAddr.Hex()
 
-	err = i.ContractsQ.FilterByAddresses(event.Raw.Address.Hex()).Update(data.ContractToUpdate{
+	err = i.MasterQ.ContractsQ().FilterByAddresses(event.Raw.Address.Hex()).Update(data.ContractToUpdate{
 		Block: &blockNumber,
 	})
 	if err != nil {

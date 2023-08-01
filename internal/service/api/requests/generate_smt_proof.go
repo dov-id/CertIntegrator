@@ -25,8 +25,12 @@ func NewGenerateProofRequest(r *http.Request) (GenerateProofRequest, error) {
 
 func (r *GenerateProofRequest) validate() error {
 	return validation.Errors{
-		"node_key": validation.Validate(&r.Data.Attributes.NodeKey, validation.Required, validation.By(MustBeValidEthAddress)), //is user address
-		"contract": validation.Validate(&r.Data.Attributes.Contract, validation.Required, validation.By(MustBeValidEthAddress)),
+		"node_key": validation.Validate(
+			&r.Data.Attributes.NodeKey, validation.Required, validation.By(MustBeValidEthAddress),
+		), //is user address
+		"contract": validation.Validate(
+			&r.Data.Attributes.Contract, validation.Required, validation.By(MustBeValidEthAddress),
+		),
 	}.Filter()
 }
 

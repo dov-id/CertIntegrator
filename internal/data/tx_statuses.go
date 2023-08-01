@@ -1,7 +1,5 @@
 package data
 
-import sq "github.com/Masterminds/squirrel"
-
 type TxStatuses interface {
 	New() TxStatuses
 
@@ -10,7 +8,7 @@ type TxStatuses interface {
 	Get() (*TxStatus, error)
 	Select() ([]TxStatus, error)
 
-	WithInnerSelect(selector sq.SelectBuilder, alias string) TxStatuses
+	WithCountNetworkColumn() TxStatuses
 	FilterByNetworksAmount(networksAmount ...int64) TxStatuses
 }
 

@@ -28,16 +28,16 @@ func (i *indexer) handleIssuerTransferLog(ctx context.Context, eventLog types.Lo
 		return errors.Wrap(err, "failed to parse transfer event data")
 	}
 
-	contract, err := i.ContractsQ.FilterByAddresses(event.Raw.Address.Hex()).Get()
+	contract, err := i.MasterQ.ContractsQ().FilterByAddresses(event.Raw.Address.Hex()).Get()
 	if err != nil {
 		return errors.Wrap(err, "failed to get contract from database")
 	}
 
 	if contract == nil {
-		contract, err = i.ContractsQ.Insert(data.Contract{
+		contract, err = i.MasterQ.ContractsQ().Insert(data.Contract{
 			Name:    IssuerContract,
 			Address: event.Raw.Address.Hex(),
-			Type:    data.ISSUER,
+			Type:    data.Issuer,
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to save new contract")
@@ -52,24 +52,9 @@ func (i *indexer) handleIssuerTransferLog(ctx context.Context, eventLog types.Lo
 	}
 
 	if event.From.Hex() == ZeroAddress {
-		err = i.handleMint(ctx, mTree, event, int64(event.Raw.BlockNumber))
+		err = i.handleMint(ctx, mTree, event, int64(event.Raw.BlockNumber), int64(contract.Id))
 		if err != nil {
 			return errors.Wrap(err, "failed to handle mint event")
-		}
-
-		user, err := i.UsersQ.FilterByAddresses(event.To.Hex()).Get()
-		if err != nil {
-			return errors.Wrap(err, "failed to get user")
-		}
-
-		if user != nil {
-			err = i.ParticipantsQ.Insert(data.Participant{
-				ContractId:  int64(contract.Id),
-				UserAddress: event.To.Hex(),
-			})
-			if err != nil {
-				return errors.Wrap(err, "failed to insert participant")
-			}
 		}
 		return nil
 	}
@@ -82,7 +67,13 @@ func (i *indexer) handleIssuerTransferLog(ctx context.Context, eventLog types.Lo
 	return nil
 }
 
-func (i *indexer) handleTransfer(ctx context.Context, mTree *merkletree.MerkleTree, event *contracts.TokenContractTransfer, blockNumber int64, treeStorage *postgres.Storage) error {
+func (i *indexer) handleTransfer(
+	ctx context.Context,
+	mTree *merkletree.MerkleTree,
+	event *contracts.TokenContractTransfer,
+	blockNumber int64,
+	treeStorage *postgres.Storage,
+) error {
 	receiver := event.To.Big()
 
 	_, leafValue, _, err := mTree.Get(ctx, receiver)
@@ -107,27 +98,33 @@ func (i *indexer) handleTransfer(ctx context.Context, mTree *merkletree.MerkleTr
 	return i.updateContractsStates(event, blockNumber, mTree.Root(), "finish handling transfer event")
 }
 
-func (i *indexer) handleMint(ctx context.Context, mTree *merkletree.MerkleTree, event *contracts.TokenContractTransfer, blockNumber int64) error {
+func (i *indexer) handleMint(
+	ctx context.Context,
+	mTree *merkletree.MerkleTree,
+	event *contracts.TokenContractTransfer,
+	blockNumber int64,
+	contractId int64,
+) error {
 	receiver := event.To.Big()
 
 	err := helpers.ProcessPublicKey(helpers.ProcessPubKeyParams{
-		Ctx:     ctx,
-		Cfg:     i.cfg,
-		Address: event.To,
-		UsersQ:  i.UsersQ,
-		Storage: i.dailyStorage,
-		Clients: i.Clients,
+		Ctx:        ctx,
+		Cfg:        i.cfg,
+		Address:    event.To,
+		ContractId: uint64(contractId),
+		UsersQ:     i.MasterQ.UsersQ(),
+		Clients:    i.Clients,
 	})
 	if err != nil && !pkgErrors.Is(err, data.ErrNoPublicKey) {
 		return errors.Wrap(err, "failed to process public key")
 	}
 
 	_, leafValue, _, err := mTree.Get(ctx, receiver)
-	if err != nil && err != merkletree.ErrKeyNotFound {
+	if err != nil && !pkgErrors.Is(err, merkletree.ErrKeyNotFound) {
 		return errors.Wrap(err, "failed to get leaf")
 	}
 
-	if err == merkletree.ErrKeyNotFound {
+	if pkgErrors.Is(err, merkletree.ErrKeyNotFound) {
 		err = mTree.Add(ctx, receiver, big.NewInt(1))
 		if err != nil {
 			return errors.Wrap(err, "failed to add new leaf in merkle tree")
@@ -145,7 +142,12 @@ func (i *indexer) handleMint(ctx context.Context, mTree *merkletree.MerkleTree, 
 	return i.updateContractsStates(event, blockNumber, mTree.Root(), "finish handling mint event")
 }
 
-func (i *indexer) completelyDeleteKey(ctx context.Context, mTree *merkletree.MerkleTree, event *contracts.TokenContractTransfer, treeStorage *postgres.Storage) error {
+func (i *indexer) completelyDeleteKey(
+	ctx context.Context,
+	mTree *merkletree.MerkleTree,
+	event *contracts.TokenContractTransfer,
+	treeStorage *postgres.Storage,
+) error {
 	err := mTree.Delete(ctx, event.To.Big())
 	if err != nil {
 		return errors.Wrap(err, "failed to delete address from merkle tree")
@@ -161,7 +163,7 @@ func (i *indexer) completelyDeleteKey(ctx context.Context, mTree *merkletree.Mer
 		return errors.Wrap(err, "failed to delete mtree")
 	}
 
-	contract, err := i.ContractsQ.FilterByAddresses(event.Raw.Address.Hex()).Get()
+	contract, err := i.MasterQ.ContractsQ().FilterByAddresses(event.Raw.Address.Hex()).Get()
 	if err != nil {
 		return errors.Wrap(err, "failed to get contract")
 	}
@@ -183,8 +185,13 @@ func (i *indexer) completelyDeleteKey(ctx context.Context, mTree *merkletree.Mer
 	return nil
 }
 
-func (i *indexer) updateContractsStates(event *contracts.TokenContractTransfer, blockNumber int64, root *merkletree.Hash, msg string) error {
-	err := i.ContractsQ.FilterByAddresses(event.Raw.Address.Hex()).Update(data.ContractToUpdate{
+func (i *indexer) updateContractsStates(
+	event *contracts.TokenContractTransfer,
+	blockNumber int64,
+	root *merkletree.Hash,
+	msg string,
+) error {
+	err := i.MasterQ.ContractsQ().FilterByAddresses(event.Raw.Address.Hex()).Update(data.ContractToUpdate{
 		Block: &blockNumber,
 	})
 	if err != nil {
@@ -192,11 +199,8 @@ func (i *indexer) updateContractsStates(event *contracts.TokenContractTransfer, 
 	}
 	i.Blocks[event.Raw.Address.Hex()] = blockNumber
 
-	//var state [32]byte
-	//copy(state[:], root[:])
-
-	err = i.TransactionsQ.Insert(data.Transaction{
-		Status: data.PENDING,
+	err = i.MasterQ.TransactionsQ().Insert(data.Transaction{
+		Status: data.TransactionStatusPending,
 		Course: event.Raw.Address.Hex(),
 		State:  root[:],
 	})

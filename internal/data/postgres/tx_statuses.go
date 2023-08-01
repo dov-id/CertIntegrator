@@ -2,18 +2,20 @@ package postgres
 
 import (
 	"database/sql"
+	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/dov-id/cert-integrator-svc/internal/data"
 	"github.com/fatih/structs"
+	pkgErrors "github.com/pkg/errors"
 	"gitlab.com/distributed_lab/kit/pgdb"
 )
 
 const (
-	TxStatusesTableName     = "tx_statuses"
-	TxStatusesTxIdColumn    = TxStatusesTableName + ".tx_id"
-	TxStatusesNetworkColumn = TxStatusesTableName + ".network"
-	TxCountNetworkColumn    = "count_network"
+	txStatusesTableName     = "tx_statuses"
+	txStatusesTxIdColumn    = txStatusesTableName + ".tx_id"
+	txStatusesNetworkColumn = txStatusesTableName + ".network"
+	txCountNetworkColumn    = "count_network"
 )
 
 type TxStatusesQ struct {
@@ -26,9 +28,9 @@ type TxStatusesQ struct {
 func NewTxStatusesQ(db *pgdb.DB) data.TxStatuses {
 	return &TxStatusesQ{
 		db:            db,
-		selectBuilder: sq.Select("*").From(TxStatusesTableName),
-		updateBuilder: sq.Update(TxStatusesTableName),
-		deleteBuilder: sq.Delete(TxStatusesTableName),
+		selectBuilder: sq.Select("*").From(txStatusesTableName),
+		updateBuilder: sq.Update(txStatusesTableName),
+		deleteBuilder: sq.Delete(txStatusesTableName),
 	}
 }
 
@@ -37,9 +39,10 @@ func (q TxStatusesQ) New() data.TxStatuses {
 }
 
 func (q TxStatusesQ) Insert(transaction data.TxStatus) error {
-	query := sq.Insert(TxStatusesTableName).SetMap(structs.Map(transaction))
-
-	return q.db.Exec(query)
+	return q.db.Exec(
+		sq.Insert(txStatusesTableName).
+			SetMap(structs.Map(transaction)),
+	)
 }
 
 func (q TxStatusesQ) Delete() error {
@@ -61,7 +64,7 @@ func (q TxStatusesQ) Get() (*data.TxStatus, error) {
 	var result data.TxStatus
 	err := q.db.Get(&result, q.selectBuilder)
 
-	if err == sql.ErrNoRows {
+	if pkgErrors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
 
@@ -81,7 +84,7 @@ func (q TxStatusesQ) GroupBy(columns ...string) data.TxStatuses {
 }
 
 func (q TxStatusesQ) FilterByNetworksAmount(networksAmount ...int64) data.TxStatuses {
-	equal := sq.Eq{TxCountNetworkColumn: networksAmount}
+	equal := sq.Eq{txCountNetworkColumn: networksAmount}
 
 	q.selectBuilder = q.selectBuilder.Where(equal)
 	q.updateBuilder = q.updateBuilder.Where(equal)
@@ -90,14 +93,14 @@ func (q TxStatusesQ) FilterByNetworksAmount(networksAmount ...int64) data.TxStat
 	return q
 }
 
-func (q TxStatusesQ) WithInnerSelect(selector sq.SelectBuilder, alias string) data.TxStatuses {
-	q.selectBuilder = q.selectBuilder.FromSelect(selector, alias)
+func (q TxStatusesQ) WithCountNetworkColumn() data.TxStatuses {
+	innerSelect := sq.Select().
+		Columns(txStatusesTxIdColumn).
+		Column(sq.Alias(sq.Expr(fmt.Sprintf("COUNT(DISTINCT %s)", txStatusesNetworkColumn)), txCountNetworkColumn)).
+		From(txStatusesTableName).
+		GroupBy(txStatusesTxIdColumn)
+
+	q.selectBuilder = q.selectBuilder.FromSelect(innerSelect, "t")
 
 	return q
-}
-
-func (q TxStatusesQ) SelectWithCount() {
-	//sq.Expr("COUNT(DISTINCT $1)")
-	//sq.Alias("COUNT(DISTINCT network)", "count_network")
-	//sq.Select(TxStatusesTxIdColumn, " as count_network").From(TxStatusesTableName).GroupBy(txStatusesTxIdColumn)
 }

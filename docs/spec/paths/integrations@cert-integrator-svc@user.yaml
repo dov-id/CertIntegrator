@@ -1,0 +1,24 @@
+get:
+  tags:
+    - Users
+  summary: Retrieve users
+  operationId: GetUsers
+  description: Endpoint for retrieving user's by course address.
+  parameters:
+    - $ref: '#/components/parameters/courseParam'
+    - $ref: '#/components/parameters/numberParam'
+  responses:
+    '200':
+      description: Success
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: object
+                $ref: '#/components/schemas/User'
+    '400':
+      description: Bad request.
+    '500':
+      description: Internal server error.

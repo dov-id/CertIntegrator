@@ -3,8 +3,8 @@ package data
 type ContractType string
 
 const (
-	FABRIC ContractType = "fabric"
-	ISSUER ContractType = "issuer"
+	Fabric ContractType = "fabric"
+	Issuer ContractType = "issuer"
 )
 
 type Contracts interface {

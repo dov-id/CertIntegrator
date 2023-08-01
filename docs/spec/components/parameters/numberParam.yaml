@@ -1,0 +1,8 @@
+in: query
+name: 'filter[number]'
+required: true
+schema:
+  type: string
+  description: >-
+    Some number required in endpoint.
+  example: "5"

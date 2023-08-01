@@ -17,8 +17,7 @@ type cleaner struct {
 	cfg config.Config
 	log *logan.Entry
 
-	TxStatusesQ   data.TxStatuses
-	TransactionsQ data.Transactions
+	MasterQ data.MasterQ
 }
 
 func Run(cfg config.Config, ctx context.Context) {
@@ -27,9 +26,8 @@ func Run(cfg config.Config, ctx context.Context) {
 
 func NewCleaner(cfg config.Config) Cleaner {
 	return &cleaner{
-		cfg:           cfg,
-		log:           cfg.Log(),
-		TransactionsQ: postgres.NewTransactionsQ(cfg.DB().Clone()),
-		TxStatusesQ:   postgres.NewTxStatusesQ(cfg.DB().Clone()),
+		cfg:     cfg,
+		log:     cfg.Log(),
+		MasterQ: postgres.NewMasterQ(cfg.DB().Clone()),
 	}
 }

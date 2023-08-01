@@ -14,28 +14,18 @@ CREATE TABLE IF NOT EXISTS contracts (
 CREATE INDEX IF NOT EXISTS contracts_address_idx ON contracts(address);
 
 CREATE TABLE IF NOT EXISTS users (
-    address    TEXT UNIQUE NOT NULL,
-    public_key TEXT        NOT NULL
-);
+    address     TEXT   NOT NULL,
+    contract_id BIGINT NOT NULL,
+    public_key  TEXT   NOT NULL,
 
-CREATE INDEX IF NOT EXISTS users_address_idx ON users(address);
+    UNIQUE (address, contract_id),
 
-CREATE TABLE IF NOT EXISTS participants (
-    user_address TEXT   NOT NULL,
-    contract_id  BIGINT NOT NULL,
-
-    UNIQUE (user_address, contract_id),
-
-    FOREIGN KEY(user_address)
-        REFERENCES users(address)
-        ON DELETE CASCADE,
     FOREIGN KEY(contract_id)
         REFERENCES contracts(id)
         ON DELETE CASCADE
 );
 
-CREATE INDEX IF NOT EXISTS participants_user_idx ON participants(user_address);
-CREATE INDEX IF NOT EXISTS participants_contract_idx ON participants(contract_id);
+CREATE INDEX IF NOT EXISTS users_address_idx ON users(address);
 
 CREATE TABLE IF NOT EXISTS transactions (
     id       BIGSERIAL      PRIMARY KEY,

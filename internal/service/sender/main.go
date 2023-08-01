@@ -7,9 +7,10 @@ import (
 	"github.com/dov-id/cert-integrator-svc/internal/config"
 	"github.com/dov-id/cert-integrator-svc/internal/data"
 	"github.com/dov-id/cert-integrator-svc/internal/data/postgres"
-	"github.com/dov-id/cert-integrator-svc/internal/types"
+	"github.com/dov-id/cert-integrator-svc/internal/helpers"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/pkg/errors"
 	"gitlab.com/distributed_lab/logan/v3"
 )
 
@@ -21,15 +22,14 @@ type sender struct {
 	cfg config.Config
 	log *logan.Entry
 
-	TransactionsQ data.Transactions
-	TxStatusesQ   data.TxStatuses
+	MasterQ data.MasterQ
 
-	Clients         map[types.Network]*ethclient.Client
-	CertIntegrators map[types.Network]*contracts.CertIntegratorContract
+	Clients         map[data.Network]*ethclient.Client
+	CertIntegrators map[data.Network]*contracts.CertIntegratorContract
 }
 
 type updateStateParams struct {
-	network        types.Network
+	network        data.Network
 	client         *ethclient.Client
 	ids            []int64
 	courses        []common.Address
@@ -37,16 +37,25 @@ type updateStateParams struct {
 	certIntegrator *contracts.CertIntegratorContract
 }
 
-//func Run(cfg config.Config, ctx context.Context) {
-//	NewSender(cfg, _, _).Run(ctx)
-//}
+func Run(cfg config.Config, ctx context.Context) {
+	NewSender(ctx, cfg).Run(ctx)
+}
 
-func NewSender(cfg config.Config, clients map[types.Network]*ethclient.Client, certIntegrators map[types.Network]*contracts.CertIntegratorContract) Sender {
+func NewSender(ctx context.Context, cfg config.Config) Sender {
+	clients, err := helpers.GetNetworkClients(ctx)
+	if err != nil {
+		panic(errors.Wrap(err, "failed to get network clients"))
+	}
+
+	certIntegrators, err := helpers.GetCertIntegratorContracts(ctx)
+	if err != nil {
+		panic(errors.Wrap(err, "failed to get cert integrator contracts"))
+	}
+
 	return &sender{
 		cfg:             cfg,
 		log:             cfg.Log(),
-		TransactionsQ:   postgres.NewTransactionsQ(cfg.DB().Clone()),
-		TxStatusesQ:     postgres.NewTxStatusesQ(cfg.DB().Clone()),
+		MasterQ:         postgres.NewMasterQ(cfg.DB().Clone()),
 		Clients:         clients,
 		CertIntegrators: certIntegrators,
 	}

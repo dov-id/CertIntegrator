@@ -8,6 +8,7 @@ import (
 	sq "github.com/Masterminds/squirrel"
 	"github.com/dov-id/cert-integrator-svc/internal/data"
 	"github.com/iden3/go-merkletree-sql/v2"
+	pkgErrors "github.com/pkg/errors"
 	"gitlab.com/distributed_lab/kit/pgdb"
 	"gitlab.com/distributed_lab/logan/v3/errors"
 )
@@ -70,7 +71,7 @@ func (s *Storage) Get(ctx context.Context, key []byte) (*merkletree.Node, error)
 	err := s.db.Get(&item, stmt)
 
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if pkgErrors.Is(err, sql.ErrNoRows) {
 			return nil, merkletree.ErrNotFound
 		}
 		return nil, err
@@ -140,7 +141,7 @@ func (s *Storage) GetRoot(ctx context.Context) (*merkletree.Hash, error) {
 
 	err = s.db.Get(&item, stmt)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if pkgErrors.Is(err, sql.ErrNoRows) {
 			return nil, merkletree.ErrNotFound
 		}
 		return nil, err

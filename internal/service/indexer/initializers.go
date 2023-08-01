@@ -2,54 +2,13 @@ package indexer
 
 import (
 	"context"
-	"fmt"
 
-	"github.com/dov-id/cert-integrator-svc/contracts"
 	"github.com/dov-id/cert-integrator-svc/internal/config"
 	"github.com/dov-id/cert-integrator-svc/internal/data"
 	"github.com/dov-id/cert-integrator-svc/internal/data/postgres"
-	"github.com/dov-id/cert-integrator-svc/internal/types"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/dov-id/cert-integrator-svc/internal/helpers"
 	"gitlab.com/distributed_lab/logan/v3/errors"
 )
-
-func InitNetworkClients(networks map[types.Network]config.Network, rpcProvider *config.RpcProviderCfg) (map[types.Network]*ethclient.Client, error) {
-	clients := make(map[types.Network]*ethclient.Client)
-
-	for network, params := range networks {
-		rawUrl := fmt.Sprint(params.RpcUrl, rpcProvider.ApiKey)
-		if network == data.QNetwork {
-			rawUrl = params.RpcUrl
-		}
-
-		client, err := ethclient.Dial(rawUrl)
-		if err != nil {
-			return nil, errors.Wrap(err, fmt.Sprintf("failed to make dial connect to `%s` network", network))
-		}
-		clients[network] = client
-	}
-
-	return clients, nil
-}
-
-func initCertIntegratorContracts(
-	certIntegrators map[types.Network]string,
-	clients map[types.Network]*ethclient.Client,
-) (map[types.Network]*contracts.CertIntegratorContract, error) {
-	certIntegratorContracts := make(map[types.Network]*contracts.CertIntegratorContract)
-
-	for network, address := range certIntegrators {
-		contract, err := contracts.NewCertIntegratorContract(common.HexToAddress(address), clients[network])
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to create new ethereum cert integrator contract")
-		}
-
-		certIntegratorContracts[network] = contract
-	}
-
-	return certIntegratorContracts, nil
-}
 
 func updAndGetContractsInfo(contractsQ data.Contracts, list []config.Contract, types data.ContractType) (map[string]int64, []string, error) {
 	err := updateContractsDB(contractsQ, list, types)
@@ -97,13 +56,13 @@ func updateContractsDB(contractsQ data.Contracts, list []config.Contract, types 
 	return nil
 }
 
-func prepareIndexerParams(cfg config.Config, ctx context.Context) (*newIndexerParams, error) {
-	clients, err := InitNetworkClients(cfg.Networks().Networks, cfg.RpcProvider())
+func prepareIndexerParams(ctx context.Context, cfg config.Config) (*newIndexerParams, error) {
+	clients, err := helpers.GetNetworkClients(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to init network clients")
 	}
 
-	certIntegrators, err := initCertIntegratorContracts(cfg.CertificatesIntegrator().Addresses, clients)
+	certIntegrators, err := helpers.GetCertIntegratorContracts(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to init cert integrator contracts")
 	}
@@ -111,7 +70,7 @@ func prepareIndexerParams(cfg config.Config, ctx context.Context) (*newIndexerPa
 	issuerBlocks, issuerAddresses, err := updAndGetContractsInfo(
 		postgres.NewContractsQ(cfg.DB()),
 		cfg.CertificatesIssuer().List,
-		data.ISSUER,
+		data.Issuer,
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to update and retrieve certificates issuer contracts info")
@@ -120,7 +79,7 @@ func prepareIndexerParams(cfg config.Config, ctx context.Context) (*newIndexerPa
 	fabricBlocks, fabricAddresses, err := updAndGetContractsInfo(
 		postgres.NewContractsQ(cfg.DB()),
 		cfg.CertificatesFabric().List,
-		data.FABRIC,
+		data.Fabric,
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to update and retrieve certificates fabric contracts info")
