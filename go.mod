@@ -9,11 +9,12 @@ require (
 	github.com/fatih/structs v1.1.0
 	github.com/go-chi/chi v4.1.2+incompatible
 	github.com/go-ozzo/ozzo-validation v3.6.0+incompatible
+	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
 	github.com/iden3/go-merkletree-sql/v2 v2.0.5
 	github.com/pkg/errors v0.9.1
 	github.com/rubenv/sql-migrate v1.4.0
 	gitlab.com/distributed_lab/ape v1.7.1
-	gitlab.com/distributed_lab/figure v2.1.2+incompatible
+	gitlab.com/distributed_lab/figure/v3 v3.1.3
 	gitlab.com/distributed_lab/kit v1.11.2
 	gitlab.com/distributed_lab/logan v3.8.1+incompatible
 	gitlab.com/distributed_lab/running v1.6.0
@@ -23,6 +24,7 @@ require (
 require (
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751 // indirect
 	github.com/alecthomas/units v0.0.0-20190924025748-f65c72e2690d // indirect
+	github.com/asaskevich/govalidator v0.0.0-20200108200545-475eaeb16496 // indirect
 	github.com/btcsuite/btcd/btcec/v2 v2.3.2 // indirect
 	github.com/certifi/gocertifi v0.0.0-20200211180108-c7c1fbc02894 // indirect
 	github.com/deckarep/golang-set/v2 v2.3.0 // indirect
@@ -32,7 +34,6 @@ require (
 	github.com/getsentry/sentry-go v0.18.0 // indirect
 	github.com/go-gorp/gorp/v3 v3.1.0 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
-	github.com/go-ozzo/ozzo-validation/v4 v4.3.0 // indirect
 	github.com/go-stack/stack v1.8.1 // indirect
 	github.com/google/jsonapi v0.0.0-20200226002910-c8283f632fb7 // indirect
 	github.com/google/uuid v1.3.0 // indirect
@@ -59,7 +60,7 @@ require (
 	github.com/tklauser/go-sysconf v0.3.11 // indirect
 	github.com/tklauser/numcpus v0.6.1 // indirect
 	github.com/yusufpapurcu/wmi v1.2.3 // indirect
-	gitlab.com/distributed_lab/figure/v3 v3.1.3 // indirect
+	gitlab.com/distributed_lab/figure v2.1.2+incompatible // indirect
 	gitlab.com/distributed_lab/lorem v0.2.0 // indirect
 	golang.org/x/crypto v0.11.0 // indirect
 	golang.org/x/sys v0.10.0 // indirect

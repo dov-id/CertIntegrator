@@ -14,6 +14,7 @@ func (n Network) String() string { return string(n) }
 var (
 	ErrNoContract                  = errors.New("no contract was found")
 	ErrFailedToCastKey             = errors.New("failed to cast public key to ECDSA")
+	ErrInvalidInt64Array           = errors.New("given value is invalid int array")
 	ErrFailedToCastClients         = errors.New("failed to cast interface{} to map[data.Network]*ethclient.Client")
 	ErrFailedToCastCertIntegrators = errors.New("failed to cast interface{} to map[data.Network]*contracts.CertIntegratorContract")
 	ErrReplacementTxUnderpriced    = errors.New("replacement transaction underpriced")
@@ -25,6 +26,7 @@ var (
 	ErrTxWithoutSignature          = errors.New("server returned transaction without signature")
 	ErrNotString                   = errors.New("the value is not a string")
 	ErrInvalidEthAddress           = errors.New("given value is invalid ethereum address")
+	ErrInvalidIdx                  = errors.New("given value is invalid index")
 )
 
 const (

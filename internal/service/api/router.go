@@ -27,7 +27,7 @@ func (s *Router) router() chi.Router {
 		r.Get("/public_key", handlers.GetPublicKey)
 
 		r.Route("/users", func(r chi.Router) {
-			r.Get("/", handlers.GetUsers)
+			r.Post("/", handlers.GetUsers)
 			r.Get("/count", handlers.GetUsersCount)
 		})
 	})

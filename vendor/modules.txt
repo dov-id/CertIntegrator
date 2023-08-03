@@ -11,6 +11,9 @@ github.com/alecthomas/template/parse
 # github.com/alecthomas/units v0.0.0-20190924025748-f65c72e2690d
 ## explicit
 github.com/alecthomas/units
+# github.com/asaskevich/govalidator v0.0.0-20200108200545-475eaeb16496
+## explicit; go 1.12
+github.com/asaskevich/govalidator
 # github.com/btcsuite/btcd/btcec/v2 v2.3.2
 ## explicit; go 1.17
 github.com/btcsuite/btcd/btcec/v2
@@ -86,6 +89,7 @@ github.com/go-ozzo/ozzo-validation
 # github.com/go-ozzo/ozzo-validation/v4 v4.3.0
 ## explicit; go 1.13
 github.com/go-ozzo/ozzo-validation/v4
+github.com/go-ozzo/ozzo-validation/v4/is
 # github.com/go-stack/stack v1.8.1
 ## explicit; go 1.17
 github.com/go-stack/stack
