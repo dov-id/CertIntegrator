@@ -1,0 +1,23 @@
+get:
+  tags:
+    - Users count
+  summary: Retrieve users count
+  operationId: GetUsersCount
+  description: Endpoint for retrieving amount of user's by course address.
+  parameters:
+    - $ref: '#/components/parameters/courseParam'
+  responses:
+    '200':
+      description: Success
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: object
+                $ref: '#/components/schemas/Count'
+    '400':
+      description: Bad request.
+    '500':
+      description: Internal server error.

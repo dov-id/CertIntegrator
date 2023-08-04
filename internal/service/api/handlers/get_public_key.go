@@ -1,115 +1,101 @@
 package handlers
 
 import (
-	"context"
 	"net/http"
 
-	"github.com/dov-id/cert-integrator-svc/internal/config"
 	"github.com/dov-id/cert-integrator-svc/internal/data"
 	"github.com/dov-id/cert-integrator-svc/internal/helpers"
-	"github.com/dov-id/cert-integrator-svc/internal/service/api/models"
 	"github.com/dov-id/cert-integrator-svc/internal/service/api/requests"
-	"github.com/dov-id/cert-integrator-svc/internal/service/storage"
+	"github.com/dov-id/cert-integrator-svc/internal/service/api/responses"
 	"github.com/ethereum/go-ethereum/common"
+	pkgErrors "github.com/pkg/errors"
 	"gitlab.com/distributed_lab/ape"
 	"gitlab.com/distributed_lab/ape/problems"
 	"gitlab.com/distributed_lab/logan/v3/errors"
 )
 
 func GetPublicKey(w http.ResponseWriter, r *http.Request) {
-	request, err := requests.NewGetRoleRequest(r)
+	request, err := requests.NewGetPublicKeyRequest(r)
 	if err != nil {
-		Log(r).WithError(err).Error("bad request")
+		Log(r).WithError(err).Debug("bad request")
 		ape.RenderErr(w, problems.BadRequest(err)...)
 		return
 	}
 
-	if request.Address == nil {
-		Log(r).WithError(err).Error("address is empty")
+	contract, err := MasterQ(r).ContractsQ().FilterByAddresses(*request.Course).Get()
+	if err != nil {
+		Log(r).WithError(err).Debug("failed to get contract")
 		ape.RenderErr(w, problems.BadRequest(err)...)
 		return
 	}
-	address := *request.Address
 
-	user, err := UsersQ(r).FilterByAddresses(address).Get()
+	if contract == nil {
+		Log(r).WithError(err).Debug("failed to get contract")
+		ape.RenderErr(w, problems.BadRequest(err)...)
+		return
+	}
+
+	user, err := MasterQ(r).UsersQ().FilterByAddresses(*request.Address).Get()
 	if err != nil {
-		Log(r).WithError(err).Error("failed to get user")
+		Log(r).WithError(err).Debug("failed to get user")
 		ape.RenderErr(w, problems.BadRequest(err)...)
 		return
 	}
 
 	if user != nil {
 		w.WriteHeader(http.StatusOK)
-		ape.Render(w, models.NewPublicKeyResponse(user.Address, user.PublicKey))
+		ape.Render(w, responses.NewUserResponse(*user))
 		return
 	}
 
-	clients, err := helpers.InitNetworkClients(Cfg(r).Networks().Networks)
+	err = findPubKey(r, *request.Address, int64(contract.Id))
 	if err != nil {
-		Log(r).WithError(err).Error("failed to init network clents")
-		ape.RenderErr(w, problems.InternalError())
-		return
-	}
-
-	err = helpers.ProcessPublicKey(helpers.ProcessPubKeyParams{
-		Cfg:     Cfg(r),
-		Address: common.HexToAddress(address),
-		UsersQ:  UsersQ(r),
-		Storage: storage.DailyStorageInstance(ParentCtx(r)),
-		Clients: clients,
-	})
-	if err != nil {
-		if err.Error() == data.NoPublicKeyErr {
-			amount, err := getLeftAttemptsAmount(ParentCtx(r), Cfg(r), common.HexToAddress(address))
-			if err != nil {
-				Log(r).WithError(err).Error("failed to get left attempts amount")
-				ape.RenderErr(w, problems.InternalError())
-				return
-			}
-
+		if pkgErrors.Is(err, data.ErrNoPublicKey) {
 			w.WriteHeader(http.StatusNotFound)
-			ape.Render(w, models.NewAttemptsResponse(amount))
+			ape.Render(w, problems.NotFound())
 			return
 		}
-		Log(r).WithError(err).Error("failed to process public key")
+
+		Log(r).WithError(err).Debug("failed to find public key")
 		ape.RenderErr(w, problems.InternalError())
 		return
 	}
 
-	for _, client := range clients {
-		client.Close()
-	}
-
-	user, err = UsersQ(r).FilterByAddresses(address).Get()
+	user, err = MasterQ(r).UsersQ().FilterByAddresses(*request.Address).Get()
 	if err != nil {
-		Log(r).WithError(err).Error("failed to get user")
-		ape.RenderErr(w, problems.BadRequest(err)...)
+		Log(r).WithError(err).Debug("failed to get user")
+		ape.RenderErr(w, problems.InternalError())
 		return
 	}
 
 	if user != nil {
 		w.WriteHeader(http.StatusOK)
-		ape.Render(w, models.NewPublicKeyResponse(user.Address, user.PublicKey))
-		return
-	}
-
-	amount, err := getLeftAttemptsAmount(ParentCtx(r), Cfg(r), common.HexToAddress(address))
-	if err != nil {
-		Log(r).WithError(err).Error("failed to get left attempts amount")
-		ape.RenderErr(w, problems.InternalError())
+		ape.Render(w, responses.NewUserResponse(*user))
 		return
 	}
 
 	w.WriteHeader(http.StatusNotFound)
-	ape.Render(w, models.NewAttemptsResponse(amount))
+	ape.Render(w, problems.NotFound())
 	return
 }
 
-func getLeftAttemptsAmount(ctx context.Context, cfg config.Config, address common.Address) (int64, error) {
-	amount, err := helpers.Get(storage.DailyStorageInstance(ctx), address)
+func findPubKey(r *http.Request, address string, contractId int64) error {
+	clients, err := helpers.GetNetworkClients(ParentCtx(r))
 	if err != nil {
-		return 0, errors.Wrap(err, "failed to get amount from storage")
+		return errors.Wrap(err, "failed to init network clents")
 	}
 
-	return cfg.Attempts().Daily - amount, nil
+	err = helpers.ProcessPublicKey(helpers.ProcessPubKeyParams{
+		Ctx:        r.Context(),
+		Cfg:        Cfg(r),
+		Address:    common.HexToAddress(address),
+		UsersQ:     MasterQ(r).UsersQ(),
+		ContractId: uint64(contractId),
+		Clients:    clients,
+	})
+	if err != nil {
+		return errors.Wrap(err, "failed to process public key")
+	}
+
+	return nil
 }

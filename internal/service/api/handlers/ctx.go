@@ -13,8 +13,7 @@ type ctxKey int
 
 const (
 	logCtxKey ctxKey = iota
-	contractsCtxKey
-	usersCtxKey
+	masterQCtxKey
 	CfgCtxKey
 	ParentCtxCtxKey
 )
@@ -29,23 +28,13 @@ func Log(r *http.Request) *logan.Entry {
 	return r.Context().Value(logCtxKey).(*logan.Entry)
 }
 
-func ContractsQ(r *http.Request) data.Contracts {
-	return r.Context().Value(contractsCtxKey).(data.Contracts).New()
+func MasterQ(r *http.Request) data.MasterQ {
+	return r.Context().Value(masterQCtxKey).(data.MasterQ).New()
 }
 
-func CtxContractsQ(entry data.Contracts) func(context.Context) context.Context {
+func CtxMasterQ(entry data.MasterQ) func(context.Context) context.Context {
 	return func(ctx context.Context) context.Context {
-		return context.WithValue(ctx, contractsCtxKey, entry)
-	}
-}
-
-func UsersQ(r *http.Request) data.Users {
-	return r.Context().Value(usersCtxKey).(data.Users).New()
-}
-
-func CtxUsersQ(entry data.Users) func(context.Context) context.Context {
-	return func(ctx context.Context) context.Context {
-		return context.WithValue(ctx, usersCtxKey, entry)
+		return context.WithValue(ctx, masterQCtxKey, entry)
 	}
 }
 

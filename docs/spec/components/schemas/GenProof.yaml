@@ -1,6 +1,7 @@
 allOf:
   - $ref: "#/components/schemas/SMTProofKey"
   - type: object
+    x-go-is-request: true
     required:
       - attributes
     properties:

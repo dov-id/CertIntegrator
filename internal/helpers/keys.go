@@ -2,21 +2,20 @@ package helpers
 
 import (
 	"context"
-	"crypto/ecdsa"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/dov-id/cert-integrator-svc/internal/config"
 	"github.com/dov-id/cert-integrator-svc/internal/data"
-	"github.com/dov-id/cert-integrator-svc/internal/service/storage"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	pkgErrors "github.com/pkg/errors"
 	"gitlab.com/distributed_lab/logan/v3/errors"
 )
 
@@ -48,11 +47,12 @@ type ScannerTransaction struct {
 }
 
 type ProcessPubKeyParams struct {
-	Cfg     config.Config
-	Address common.Address
-	UsersQ  data.Users
-	Storage storage.DailyStorage
-	Clients map[string]*ethclient.Client
+	Ctx        context.Context
+	Cfg        config.Config
+	Address    common.Address
+	UsersQ     data.Users
+	ContractId uint64
+	Clients    map[data.Network]*ethclient.Client
 }
 
 func ProcessPublicKey(params ProcessPubKeyParams) error {
@@ -65,71 +65,51 @@ func ProcessPublicKey(params ProcessPubKeyParams) error {
 		return nil
 	}
 
-	isMaxAttempts, err := Check(params.Storage, params.Address, params.Cfg.Attempts().Daily)
-	if err != nil {
-		return errors.Wrap(err, "failed to check attempts in storage")
-	}
-
-	if isMaxAttempts {
-		return errors.New(data.NoPublicKeyErr)
-	}
-
-	publicKey, err := RetrievePublicKey(params.Address, params.Cfg.Networks().Networks, params.Clients)
+	publicKey, err := RetrievePublicKey(params.Ctx, params.Address, params.Cfg.Networks().Networks, params.Clients)
 	if err != nil {
 		return errors.Wrap(err, "failed to retrieve public key")
 	}
 
 	if publicKey == nil {
-		err = Add(params.Storage, params.Address, params.Cfg.Attempts().Daily)
-		if err != nil {
-			return errors.Wrap(err, "failed to add attempt in storage")
-		}
-		return errors.New(data.NoPublicKeyErr)
+		return data.ErrNoPublicKey
 	}
 
 	err = params.UsersQ.Upsert(data.User{
-		Address:   params.Address.Hex(),
-		PublicKey: hex.EncodeToString(publicKey),
+		Address:    params.Address.Hex(),
+		ContractId: params.ContractId,
+		PublicKey:  fmt.Sprintf("0x%s", hex.EncodeToString(publicKey)),
 	})
 	if err != nil {
 		return errors.Wrap(err, "failed to upsert user")
 	}
 
-	params.Storage.Delete(params.Address.Hex())
-
 	return nil
 }
 
-func RetrievePublicKey(address common.Address, networks map[string]config.Network, clients map[string]*ethclient.Client) ([]byte, error) {
+func RetrievePublicKey(
+	ctx context.Context,
+	address common.Address,
+	networks map[data.Network]config.Network,
+	clients map[data.Network]*ethclient.Client,
+) ([]byte, error) {
 	for network, params := range networks {
-		if network == data.MetamaskNetwork || network == data.InfuraNetwork {
-			continue
-		}
-
 		requestParams := data.RequestParams{
 			Method: http.MethodGet,
-			Link:   params.HttpsUrl,
+			Link:   params.BlockExplorerApiUrl,
 			Body:   nil,
 			Query: map[string]string{
 				"module":  "account",
 				"action":  "txlist",
 				"address": address.Hex(),
-				"apikey":  params.Key,
+				"apikey":  params.BlockExplorerApiKey,
 			},
 			Header:  nil,
 			Timeout: 100 * time.Second,
 		}
 
-		response, err := MakeHttpRequest(requestParams)
+		response, err := MakeHttpRequest(ctx, requestParams)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to make http request")
-		}
-
-		//	TODO: think about checking response status to handle
-		//  rate limit or just bad request/internal errors
-
-		if response == nil {
-			return nil, nil
 		}
 
 		var body ScannerResponse
@@ -137,7 +117,11 @@ func RetrievePublicKey(address common.Address, networks map[string]config.Networ
 			return nil, errors.Wrap(err, "failed to unmarshal body")
 		}
 
-		publicKey, err := getPublicKey(address, body.Result, clients[network])
+		if len(body.Result) == 0 {
+			continue
+		}
+
+		publicKey, err := getPublicKey(ctx, address, body.Result, clients[network])
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to get public key")
 		}
@@ -148,21 +132,22 @@ func RetrievePublicKey(address common.Address, networks map[string]config.Networ
 	return nil, nil
 }
 
-func getPublicKey(address common.Address, txs []ScannerTransaction, client *ethclient.Client) ([]byte, error) {
+func getPublicKey(ctx context.Context, address common.Address, txs []ScannerTransaction, client *ethclient.Client) ([]byte, error) {
 	for _, tx := range txs {
 		if strings.ToLower(tx.From) != strings.ToLower(address.Hex()) {
 			continue
 		}
 
-		transaction, isPending, err := client.TransactionByHash(context.Background(), common.HexToHash(tx.Hash))
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to get tx by hash")
-		}
-		if isPending {
+		transaction, _, err := client.TransactionByHash(ctx, common.HexToHash(tx.Hash))
+		if pkgErrors.Is(err, data.ErrTxWithoutSignature) {
 			continue
 		}
 
-		chainID, err := client.ChainID(context.Background())
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to get tx by hash")
+		}
+
+		chainID, err := client.ChainID(ctx)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to get chain id")
 		}
@@ -179,16 +164,16 @@ func getPublicKey(address common.Address, txs []ScannerTransaction, client *ethc
 }
 
 func recoverPubKeyFromTx(transaction *types.Transaction, signer types.Signer) ([]byte, error) {
-	v, r, s := transaction.RawSignatureValues()
+	vBig, r, s := transaction.RawSignatureValues()
 
-	if v.BitLen() > 8 {
-		return nil, errors.New(data.WrongSignatureValueErr)
+	if vBig.BitLen() > 8 {
+		return nil, data.ErrWrongSignatureValue
 	}
 
-	V := byte(v.Uint64())
+	v := byte(vBig.Uint64())
 
-	if !crypto.ValidateSignatureValues(V, r, s, true) {
-		return nil, errors.New(data.WrongSignatureValuesErr)
+	if !crypto.ValidateSignatureValues(v, r, s, true) {
+		return nil, data.ErrWrongSignatureValues
 	}
 
 	R, S := r.Bytes(), s.Bytes()
@@ -196,7 +181,7 @@ func recoverPubKeyFromTx(transaction *types.Transaction, signer types.Signer) ([
 	signature := make([]byte, crypto.SignatureLength)
 	copy(signature[32-len(R):32], R)
 	copy(signature[64-len(S):64], S)
-	signature[64] = V
+	signature[64] = v
 
 	pubKey, err := crypto.Ecrecover(signer.Hash(transaction).Bytes(), signature)
 	if err != nil {
@@ -204,35 +189,8 @@ func recoverPubKeyFromTx(transaction *types.Transaction, signer types.Signer) ([
 	}
 
 	if len(pubKey) == 0 || pubKey[0] != 4 {
-		return nil, errors.New(data.InvalidPublicKeyErr)
+		return nil, data.ErrInvalidPublicKey
 	}
 
 	return pubKey, nil
-}
-
-func GetKeys(private string) (*ecdsa.PrivateKey, common.Address, error) {
-	var once sync.Once
-	var privateKey *ecdsa.PrivateKey
-	var fromAddress common.Address
-	var err error
-
-	once.Do(func() {
-		privateKey, err = crypto.HexToECDSA(private)
-		if err != nil {
-			err = errors.Wrap(err, "failed to convert hex to ecdsa")
-			return
-		}
-
-		publicKey := privateKey.Public()
-		publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
-		if !ok {
-			err = errors.New(data.FailedToCastKeyErr)
-			return
-		}
-
-		fromAddress = crypto.PubkeyToAddress(*publicKeyECDSA)
-		return
-	})
-
-	return privateKey, fromAddress, nil
 }

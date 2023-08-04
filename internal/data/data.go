@@ -1,36 +1,48 @@
 package data
 
 import (
+	"errors"
 	"io"
 	"net/http"
 	"time"
 )
 
-const (
-	NilCancelFunctionErr        = "ctx cancel function is nil"
-	NoContractErr               = "no contract was found"
-	FailedToCastKeyErr          = "failed to cast public key to ECDSA"
-	FailedToCastIntErr          = "failed to cast interface{} to int64"
-	ReplacementTxUnderpricedErr = "replacement transaction underpriced"
-	WrongSignatureValueErr      = "wrong signature value"
-	WrongSignatureValuesErr     = "wrong signature values"
-	InvalidPublicKeyErr         = "invalid public key"
-	NoPublicKeyErr              = "no public key was found"
-	MaxAttemptsAmountErr        = "attempts amount to get public key reached max value"
-	NoSuchKeyErr                = "no such key in storage"
+type Network string
+
+func (n Network) String() string { return string(n) }
+
+var (
+	ErrNoContract                  = errors.New("no contract was found")
+	ErrFailedToCastKey             = errors.New("failed to cast public key to ECDSA")
+	ErrInvalidInt64Array           = errors.New("given value is invalid int array")
+	ErrFailedToCastClients         = errors.New("failed to cast interface{} to map[data.Network]*ethclient.Client")
+	ErrFailedToCastCertIntegrators = errors.New("failed to cast interface{} to map[data.Network]*contracts.CertIntegratorContract")
+	ErrReplacementTxUnderpriced    = errors.New("replacement transaction underpriced")
+	ErrWrongSignatureValue         = errors.New("wrong signature value")
+	ErrWrongSignatureValues        = errors.New("wrong signature values")
+	ErrInvalidPublicKey            = errors.New("invalid public key")
+	ErrNoPublicKey                 = errors.New("no public key was found")
+	ErrNoSuchKey                   = errors.New("no such key in storage")
+	ErrTxWithoutSignature          = errors.New("server returned transaction without signature")
+	ErrNotString                   = errors.New("the value is not a string")
+	ErrInvalidEthAddress           = errors.New("given value is invalid ethereum address")
+	ErrInvalidIdx                  = errors.New("given value is invalid index")
 )
 
 const (
 	MaxMTreeLevel  = 64
-	IndexerTimeout = 30
+	NetworksAmount = 3
 )
 
 const (
-	MetamaskNetwork = "metamask"
-	InfuraNetwork   = "infura"
-	EthereumNetwork = "ethereum"
-	PolygonNetwork  = "polygon"
-	QNetwork        = "q"
+	EthereumNetwork Network = "ethereum"
+	PolygonNetwork  Network = "polygon"
+	QNetwork        Network = "q"
+)
+
+const (
+	NetworkClients          = "network clients"
+	CertIntegratorContracts = "feedback registries contracts"
 )
 
 type RequestParams struct {

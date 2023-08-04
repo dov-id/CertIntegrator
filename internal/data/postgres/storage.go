@@ -3,10 +3,12 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/dov-id/cert-integrator-svc/internal/data"
 	"github.com/iden3/go-merkletree-sql/v2"
+	pkgErrors "github.com/pkg/errors"
 	"gitlab.com/distributed_lab/kit/pgdb"
 	"gitlab.com/distributed_lab/logan/v3/errors"
 )
@@ -62,14 +64,14 @@ func (s *Storage) Get(ctx context.Context, key []byte) (*merkletree.Node, error)
 	*/
 
 	stmt := sq.
-		Select(mtIdColumn, keyColumn, typeColumn, childLColumn, childRColumn, entryColumn, createdAtColumn, deletedAtColumn).
+		Select("*").
 		From(mtNodesTable).
 		Where(sq.Eq{mtIdColumn: s.mtId, keyColumn: key})
 
 	err := s.db.Get(&item, stmt)
 
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if pkgErrors.Is(err, sql.ErrNoRows) {
 			return nil, merkletree.ErrNotFound
 		}
 		return nil, err
@@ -113,7 +115,7 @@ func (s *Storage) Put(ctx context.Context, key []byte, node *merkletree.Node) er
 	query := sq.Insert(mtNodesTable).
 		Columns(mtIdColumn, keyColumn, typeColumn, childLColumn, childRColumn, entryColumn).
 		Values(s.mtId, key[:], node.Type, childL, childR, entry).
-		Suffix("ON CONFLICT (mt_id, key) DO "+updateStmt, args...)
+		Suffix(fmt.Sprintf("ON CONFLICT (mt_id, key) DO %s", updateStmt), args...)
 
 	return s.db.Exec(query)
 }
@@ -139,7 +141,7 @@ func (s *Storage) GetRoot(ctx context.Context) (*merkletree.Hash, error) {
 
 	err = s.db.Get(&item, stmt)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if pkgErrors.Is(err, sql.ErrNoRows) {
 			return nil, merkletree.ErrNotFound
 		}
 		return nil, err
@@ -172,7 +174,7 @@ func (s *Storage) SetRoot(ctx context.Context, hash *merkletree.Hash) error {
 		Insert(mtRootsTable).
 		Columns(mtIdColumn, keyColumn).
 		Values(s.mtId, s.currentRoot[:]).
-		Suffix("ON CONFLICT (mt_id) DO "+updateQuery, args...)
+		Suffix(fmt.Sprintf("ON CONFLICT (mt_id) DO %s", updateQuery), args...)
 
 	err := s.db.Exec(query)
 	if err != nil {
