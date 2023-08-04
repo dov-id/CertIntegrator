@@ -15,13 +15,9 @@ type Config interface {
 	comfig.Listenerer
 
 	Timeouts() *TimeoutsCfg
-	PublicKeyRetriever() *PublicKeyRetrieverCfg
 	Networks() *NetworksCfg
-	Wallet() *WalletCfg
-	RpcProvider() *RpcProviderCfg
 	CertificatesIssuer() *ContractsCfg
 	CertificatesFabric() *ContractsCfg
-	CertificatesIntegrator() *CertificatesIntegratorCfg
 }
 
 type config struct {
@@ -31,14 +27,10 @@ type config struct {
 	comfig.Listenerer
 	getter kv.Getter
 
-	publicKeyRetriever     comfig.Once
-	networks               comfig.Once
-	wallet                 comfig.Once
-	timeouts               comfig.Once
-	rpcProvider            comfig.Once
-	certificatesIssuer     comfig.Once
-	certificatesFabric     comfig.Once
-	certificatesIntegrator comfig.Once
+	networks           comfig.Once
+	timeouts           comfig.Once
+	certificatesIssuer comfig.Once
+	certificatesFabric comfig.Once
 }
 
 func New(getter kv.Getter) Config {

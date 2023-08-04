@@ -5,7 +5,6 @@ import (
 	"math/big"
 
 	"github.com/dov-id/cert-integrator-svc/internal/data"
-	"github.com/dov-id/cert-integrator-svc/internal/helpers"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -102,13 +101,20 @@ func (i *indexer) processPastEvents(ctx context.Context, client *ethclient.Clien
 func (i *indexer) subscribeAndProcessNewEvents(ctx context.Context, client *ethclient.Client) error {
 	i.log.WithField("addresses", i.Addresses).Debugf("subscribing to new events")
 
-	query := ethereum.FilterQuery{
-		Addresses: helpers.ConvertStringToAddresses(i.Addresses),
+	addresses, err := convertStringsToAddresses(i.Addresses)
+	if err != nil {
+		return errors.Wrap(err, "failed to convert strings to addresses")
 	}
 
 	logs := make(chan types.Log)
 
-	subscription, err := client.SubscribeFilterLogs(ctx, query, logs)
+	subscription, err := client.SubscribeFilterLogs(
+		ctx,
+		ethereum.FilterQuery{
+			Addresses: addresses,
+		},
+		logs,
+	)
 	if err != nil {
 		return errors.Wrap(err, "failed to subscribe to logs")
 	}
@@ -127,4 +133,17 @@ func (i *indexer) subscribeAndProcessNewEvents(ctx context.Context, client *ethc
 			return i.listen(ctx)
 		}
 	}
+}
+
+func convertStringsToAddresses(addrs []string) ([]common.Address, error) {
+	addresses := make([]common.Address, 0)
+
+	for i := range addrs {
+		if !common.IsHexAddress(addrs[i]) {
+			return nil, data.ErrInvalidEthAddress
+		}
+		addresses = append(addresses, common.HexToAddress(addrs[i]))
+	}
+
+	return addresses, nil
 }

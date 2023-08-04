@@ -10,9 +10,9 @@ import (
 )
 
 func GetCourses(w http.ResponseWriter, r *http.Request) {
-	contracts, err := ContractsQ(r).FilterByTypes(data.ISSUER).Select()
+	contracts, err := MasterQ(r).ContractsQ().FilterByTypes(data.Issuer).Select()
 	if err != nil {
-		Log(r).WithError(err).Errorf("failed to select courses")
+		Log(r).WithError(err).Debugf("failed to select courses")
 		ape.RenderErr(w, problems.InternalError())
 		return
 	}

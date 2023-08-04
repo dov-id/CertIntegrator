@@ -3,8 +3,8 @@ package data
 type TransactionStatus string
 
 const (
-	PENDING     TransactionStatus = "pending"
-	IN_PROGRESS TransactionStatus = "in progress"
+	TransactionStatusPending    TransactionStatus = "pending"
+	TransactionStatusInProgress TransactionStatus = "in progress"
 )
 
 type Transactions interface {

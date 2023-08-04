@@ -17,9 +17,7 @@ func (s *Router) router() chi.Router {
 			handlers.CtxLog(s.log),
 			handlers.CtxCfg(s.cfg),
 			handlers.CtxParentCtx(s.ctx),
-			handlers.CtxContractsQ(postgres.NewContractsQ(s.cfg.DB().Clone())),
-			handlers.CtxParticipantsQ(postgres.NewParticipantsQ(s.cfg.DB().Clone())),
-			handlers.CtxUsersQ(postgres.NewUsersQ(s.cfg.DB().Clone())),
+			handlers.CtxMasterQ(postgres.NewMasterQ(s.cfg.DB().Clone())),
 		),
 	)
 	r.Route("/integrations/cert-integrator-svc", func(r chi.Router) {
@@ -27,7 +25,11 @@ func (s *Router) router() chi.Router {
 
 		r.Get("/courses", handlers.GetCourses)
 		r.Get("/public_key", handlers.GetPublicKey)
-		r.Get("/public_keys", handlers.GetPublicKeys)
+
+		r.Route("/users", func(r chi.Router) {
+			r.Post("/", handlers.GetUsers)
+			r.Get("/count", handlers.GetUsersCount)
+		})
 	})
 
 	return r

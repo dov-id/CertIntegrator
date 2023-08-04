@@ -6,6 +6,7 @@ import (
 	sq "github.com/Masterminds/squirrel"
 	"github.com/dov-id/cert-integrator-svc/internal/data"
 	"github.com/fatih/structs"
+	pkgErrors "github.com/pkg/errors"
 	"gitlab.com/distributed_lab/kit/pgdb"
 )
 
@@ -36,9 +37,10 @@ func (q TransactionsQ) New() data.Transactions {
 }
 
 func (q TransactionsQ) Insert(transaction data.Transaction) error {
-	query := sq.Insert(transactionTableName).SetMap(structs.Map(transaction))
-
-	return q.db.Exec(query)
+	return q.db.Exec(
+		sq.Insert(transactionTableName).
+			SetMap(structs.Map(transaction)),
+	)
 }
 
 func (q TransactionsQ) Delete() error {
@@ -60,7 +62,7 @@ func (q TransactionsQ) Get() (*data.Transaction, error) {
 	var result data.Transaction
 	err := q.db.Get(&result, q.selectBuilder)
 
-	if err == sql.ErrNoRows {
+	if pkgErrors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
 

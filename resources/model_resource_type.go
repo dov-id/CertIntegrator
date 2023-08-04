@@ -8,7 +8,7 @@ type ResourceType string
 
 // List of ResourceType
 const (
-	ATTEMPTS  ResourceType = "attempts"
+	COUNT     ResourceType = "count"
 	COURSE    ResourceType = "course"
 	SMT_PROOF ResourceType = "smt_proof"
 	USER      ResourceType = "user"

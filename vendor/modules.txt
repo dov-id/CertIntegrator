@@ -1,9 +1,6 @@
 # github.com/Masterminds/squirrel v1.5.4
 ## explicit; go 1.14
 github.com/Masterminds/squirrel
-# github.com/StackExchange/wmi v0.0.0-20180116203802-5d049714c4a6
-## explicit
-github.com/StackExchange/wmi
 # github.com/alecthomas/kingpin v2.2.6+incompatible
 ## explicit
 github.com/alecthomas/kingpin
@@ -14,21 +11,24 @@ github.com/alecthomas/template/parse
 # github.com/alecthomas/units v0.0.0-20190924025748-f65c72e2690d
 ## explicit
 github.com/alecthomas/units
-# github.com/btcsuite/btcd/btcec/v2 v2.2.0
+# github.com/asaskevich/govalidator v0.0.0-20200108200545-475eaeb16496
+## explicit; go 1.12
+github.com/asaskevich/govalidator
+# github.com/btcsuite/btcd/btcec/v2 v2.3.2
 ## explicit; go 1.17
 github.com/btcsuite/btcd/btcec/v2
 github.com/btcsuite/btcd/btcec/v2/ecdsa
 # github.com/certifi/gocertifi v0.0.0-20200211180108-c7c1fbc02894
 ## explicit; go 1.12
 github.com/certifi/gocertifi
-# github.com/deckarep/golang-set/v2 v2.1.0
+# github.com/deckarep/golang-set/v2 v2.3.0
 ## explicit; go 1.18
 github.com/deckarep/golang-set/v2
-# github.com/decred/dcrd/dcrec/secp256k1/v4 v4.0.1
-## explicit; go 1.16
+# github.com/decred/dcrd/dcrec/secp256k1/v4 v4.2.0
+## explicit; go 1.17
 github.com/decred/dcrd/dcrec/secp256k1/v4
 github.com/decred/dcrd/dcrec/secp256k1/v4/ecdsa
-# github.com/ethereum/go-ethereum v1.11.6
+# github.com/ethereum/go-ethereum v1.12.0
 ## explicit; go 1.19
 github.com/ethereum/go-ethereum
 github.com/ethereum/go-ethereum/accounts
@@ -79,8 +79,8 @@ github.com/go-chi/chi/middleware
 # github.com/go-gorp/gorp/v3 v3.1.0
 ## explicit; go 1.18
 github.com/go-gorp/gorp/v3
-# github.com/go-ole/go-ole v1.2.1
-## explicit
+# github.com/go-ole/go-ole v1.2.6
+## explicit; go 1.12
 github.com/go-ole/go-ole
 github.com/go-ole/go-ole/oleutil
 # github.com/go-ozzo/ozzo-validation v3.6.0+incompatible
@@ -89,6 +89,7 @@ github.com/go-ozzo/ozzo-validation
 # github.com/go-ozzo/ozzo-validation/v4 v4.3.0
 ## explicit; go 1.13
 github.com/go-ozzo/ozzo-validation/v4
+github.com/go-ozzo/ozzo-validation/v4/is
 # github.com/go-stack/stack v1.8.1
 ## explicit; go 1.17
 github.com/go-stack/stack
@@ -98,7 +99,7 @@ github.com/google/jsonapi
 # github.com/google/uuid v1.3.0
 ## explicit
 github.com/google/uuid
-# github.com/gorilla/websocket v1.4.2
+# github.com/gorilla/websocket v1.5.0
 ## explicit; go 1.12
 github.com/gorilla/websocket
 # github.com/hashicorp/hcl v1.0.0
@@ -113,7 +114,7 @@ github.com/hashicorp/hcl/hcl/token
 github.com/hashicorp/hcl/json/parser
 github.com/hashicorp/hcl/json/scanner
 github.com/hashicorp/hcl/json/token
-# github.com/holiman/uint256 v1.2.2-0.20230321075855-87b91420868c
+# github.com/holiman/uint256 v1.2.3
 ## explicit; go 1.18
 github.com/holiman/uint256
 # github.com/iden3/go-iden3-crypto v0.0.15
@@ -159,18 +160,18 @@ github.com/pkg/errors
 ## explicit; go 1.16
 github.com/rubenv/sql-migrate
 github.com/rubenv/sql-migrate/sqlparse
-# github.com/shirou/gopsutil v3.21.4-0.20210419000835-c7a38de76ee5+incompatible
+# github.com/shirou/gopsutil v3.21.11+incompatible
 ## explicit
 github.com/shirou/gopsutil/cpu
 github.com/shirou/gopsutil/internal/common
-# github.com/sirupsen/logrus v1.9.0
+# github.com/sirupsen/logrus v1.9.3
 ## explicit; go 1.13
 github.com/sirupsen/logrus
 # github.com/spf13/afero v1.6.0
 ## explicit; go 1.13
 github.com/spf13/afero
 github.com/spf13/afero/mem
-# github.com/spf13/cast v1.5.0
+# github.com/spf13/cast v1.5.1
 ## explicit; go 1.18
 github.com/spf13/cast
 # github.com/spf13/jwalterweatherman v1.1.0
@@ -185,12 +186,15 @@ github.com/spf13/viper
 # github.com/subosito/gotenv v1.2.0
 ## explicit
 github.com/subosito/gotenv
-# github.com/tklauser/go-sysconf v0.3.5
+# github.com/tklauser/go-sysconf v0.3.11
 ## explicit; go 1.13
 github.com/tklauser/go-sysconf
-# github.com/tklauser/numcpus v0.2.2
-## explicit; go 1.11
+# github.com/tklauser/numcpus v0.6.1
+## explicit; go 1.13
 github.com/tklauser/numcpus
+# github.com/yusufpapurcu/wmi v1.2.3
+## explicit; go 1.16
+github.com/yusufpapurcu/wmi
 # gitlab.com/distributed_lab/ape v1.7.1
 ## explicit; go 1.14
 gitlab.com/distributed_lab/ape
@@ -198,6 +202,9 @@ gitlab.com/distributed_lab/ape/problems
 # gitlab.com/distributed_lab/figure v2.1.2+incompatible
 ## explicit
 gitlab.com/distributed_lab/figure
+# gitlab.com/distributed_lab/figure/v3 v3.1.3
+## explicit; go 1.19
+gitlab.com/distributed_lab/figure/v3
 # gitlab.com/distributed_lab/kit v1.11.2
 ## explicit; go 1.14
 gitlab.com/distributed_lab/kit/comfig
@@ -226,19 +233,19 @@ gitlab.com/distributed_lab/running
 gitlab.com/distributed_lab/urlval
 gitlab.com/distributed_lab/urlval/internal
 gitlab.com/distributed_lab/urlval/internal/betterreflect
-# golang.org/x/crypto v0.7.0
+# golang.org/x/crypto v0.11.0
 ## explicit; go 1.17
 golang.org/x/crypto/pbkdf2
 golang.org/x/crypto/scrypt
 golang.org/x/crypto/sha3
-# golang.org/x/sys v0.6.0
+# golang.org/x/sys v0.10.0
 ## explicit; go 1.17
 golang.org/x/sys/cpu
 golang.org/x/sys/execabs
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-# golang.org/x/text v0.8.0
+# golang.org/x/text v0.11.0
 ## explicit; go 1.17
 golang.org/x/text/cases
 golang.org/x/text/internal

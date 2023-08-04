@@ -44,7 +44,7 @@ func (s *sender) listen(ctx context.Context) error {
 }
 
 func (s *sender) processTxs(ctx context.Context) error {
-	txs, err := s.TransactionsQ.FilterByStatuses(data.PENDING).Select()
+	txs, err := s.MasterQ.TransactionsQ().FilterByStatuses(data.TransactionStatusPending).Select()
 	if err != nil {
 		return errors.Wrap(err, "failed to select transactions")
 	}
@@ -93,7 +93,7 @@ func (s *sender) publishStates(ctx context.Context, params updateStateParams) er
 }
 
 func (s *sender) sendUpdates(ctx context.Context, params updateStateParams) error {
-	auth, err := helpers.GetAuth(ctx, params.client, s.cfg.Wallet())
+	auth, err := helpers.GetAuth(ctx, params.client, s.cfg.Networks().Networks[params.network].WalletCfg)
 	if err != nil {
 		return errors.Wrap(err, "failed to get auth options")
 	}
@@ -126,8 +126,8 @@ func (s *sender) waitForTransactionMined(ctx context.Context, transaction *types
 	go func() {
 		s.log.WithField("tx", transaction.Hash().Hex()).Debugf("waiting to mine")
 
-		status := data.IN_PROGRESS
-		err := s.TransactionsQ.FilterByIds(params.ids...).Update(data.TransactionToUpdate{Status: &status})
+		status := data.TransactionStatusInProgress
+		err := s.MasterQ.TransactionsQ().FilterByIds(params.ids...).Update(data.TransactionToUpdate{Status: &status})
 		if err != nil {
 			panic(errors.Wrap(err, "failed to update tx status"))
 		}
@@ -138,7 +138,7 @@ func (s *sender) waitForTransactionMined(ctx context.Context, transaction *types
 		}
 
 		for _, id := range params.ids {
-			err = s.TxStatusesQ.Insert(data.TxStatus{
+			err = s.MasterQ.TxStatusesQ().Insert(data.TxStatus{
 				TxId:    id,
 				Network: params.network.String(),
 			})
@@ -149,5 +149,4 @@ func (s *sender) waitForTransactionMined(ctx context.Context, transaction *types
 
 		s.log.WithField("tx", transaction.Hash().Hex()).Debugf("was mined")
 	}()
-
 }

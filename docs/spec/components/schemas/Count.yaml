@@ -1,0 +1,16 @@
+allOf:
+  - $ref: "#/components/schemas/CountKey"
+  - type: object
+    required:
+      - attributes
+    properties:
+      attributes:
+        type: object
+        required:
+          - amount
+        properties:
+          amount:
+            type: integer
+            format: int64
+            description: number of raws stored in our database
+            example: 7
