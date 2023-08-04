@@ -10,6 +10,7 @@ func newSMTProof(id int64, root, key, value string, proof []string) resources.Sm
 	return resources.SmtProof{
 		Key: resources.NewKeyInt64(id, resources.SMT_PROOF),
 		Attributes: resources.SmtProofAttributes{
+			Root:      fmt.Sprintf("0x%s", root),
 			NodeKey:   fmt.Sprintf("0x%s", key),
 			NodeValue: fmt.Sprintf("0x%s", value),
 			Proof:     proof,
