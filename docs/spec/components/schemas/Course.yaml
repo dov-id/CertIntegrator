@@ -1,0 +1,20 @@
+allOf:
+  - $ref: "#/components/schemas/CourseKey"
+  - type: object
+    required:
+      - attributes
+    properties:
+      attributes:
+        type: object
+        required:
+          - name
+          - address
+        properties:
+          name:
+            type: string
+            description: course name
+            example: "Solidity"
+          address:
+            type: string
+            description: course nft address
+            example: "0x212aa7bcc2bb05ce87b473e078e9c949d56d6a720d14a7a28fe00e9e26d831d4"

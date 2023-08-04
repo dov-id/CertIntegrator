@@ -3,14 +3,10 @@ package indexer
 import (
 	"context"
 	"math/big"
-	"sort"
-	"time"
 
-	"github.com/dov-id/cert-integrator-svc/internal/config"
 	"github.com/dov-id/cert-integrator-svc/internal/data"
-	"github.com/dov-id/cert-integrator-svc/internal/data/postgres"
-	"github.com/dov-id/cert-integrator-svc/internal/helpers"
 	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -27,54 +23,32 @@ const (
 	fabricDeployEventSignature   = "TokenContractDeployed(address,(uint256,string,string))"
 )
 
-var logsHandlers = map[string]func(i *Indexer, eventLog types.Log, client *ethclient.Client) error{
-	crypto.Keccak256Hash([]byte(issuerTransferEventSignature)).Hex(): (*Indexer).handleIssuerTransferLog,
-	crypto.Keccak256Hash([]byte(fabricDeployEventSignature)).Hex():   (*Indexer).handleFabricDeployLog,
+var logsHandlers = map[string]func(i *indexer, ctx context.Context, eventLog types.Log, client *ethclient.Client) error{
+	crypto.Keccak256Hash([]byte(issuerTransferEventSignature)).Hex(): (*indexer).handleIssuerTransferLog,
+	crypto.Keccak256Hash([]byte(fabricDeployEventSignature)).Hex():   (*indexer).handleFabricDeployLog,
 }
 
-func NewIndexer(cfg config.Config, ctx context.Context, addresses []string, blocks []int64, cancel context.CancelFunc) IIndexer {
-	return &Indexer{
-		cfg:        cfg,
-		ctx:        ctx,
-		log:        cfg.Log(),
-		Addresses:  addresses,
-		Blocks:     blocks,
-		ContractsQ: postgres.NewContractsQ(cfg.DB().Clone()),
-		Cancel:     cancel,
-	}
-}
-
-func (i *Indexer) Run(ctx context.Context) {
+func (i *indexer) Run(ctx context.Context) {
 	go running.WithBackOff(
 		ctx,
 		i.log,
 		serviceName,
 		i.listen,
-		30*time.Second,
-		30*time.Second,
-		30*time.Second,
+		i.cfg.Timeouts().Indexer,
+		i.cfg.Timeouts().Indexer,
+		i.cfg.Timeouts().Indexer,
 	)
 }
 
-func (i *Indexer) listen(_ context.Context) error {
+func (i *indexer) listen(ctx context.Context) error {
 	i.log.WithField("addresses", i.Addresses).Debugf("start listener")
 
-	client, err := ethclient.Dial(i.cfg.Infura().Sepolia + i.cfg.Infura().Key)
-	if err != nil {
-		return errors.Wrap(err, "failed to make dial connect")
-	}
-
-	block, err := getBlockToStartFrom(i.ContractsQ, i.Addresses, i.Blocks)
-	if err != nil {
-		return errors.Wrap(err, "failed to get starting block")
-	}
-
-	err = i.processPastEvents(block, client)
+	err := i.processPastEvents(ctx, i.Clients[data.EthereumNetwork])
 	if err != nil {
 		return errors.Wrap(err, "failed to process past events")
 	}
 
-	err = i.subscribeAndProcessNewEvents(client)
+	err = i.subscribeAndProcessNewEvents(ctx, i.Clients[data.EthereumNetwork])
 	if err != nil {
 		return errors.Wrap(err, "failed to subscribe and process events:")
 	}
@@ -82,69 +56,65 @@ func (i *Indexer) listen(_ context.Context) error {
 	return nil
 }
 
-func getBlockToStartFrom(contractsQ data.Contracts, addresses []string, blocks []int64) (*big.Int, error) {
-	contracts, err := contractsQ.FilterByAddresses(addresses...).Select()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get contract")
-	}
-
-	for i := range contracts {
-		blocks = append(blocks, contracts[i].Block)
-	}
-
-	sort.Slice(blocks, func(i, j int) bool { return blocks[i] > blocks[j] })
-
-	return big.NewInt(blocks[0]), nil
-}
-
-func (i *Indexer) handleLogs(log types.Log, client *ethclient.Client) error {
+func (i *indexer) handleLogs(ctx context.Context, log types.Log, client *ethclient.Client) error {
 	if logHandler, ok := logsHandlers[log.Topics[0].Hex()]; ok {
-		err := logHandler(i, log, client)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (i *Indexer) processPastEvents(block *big.Int, client *ethclient.Client) error {
-	i.log.WithFields(map[string]interface{}{"block": block.String(), "addresses": i.Addresses}).Debugf("start processing past events")
-
-	filterQuery := ethereum.FilterQuery{
-		Addresses: helpers.ConvertStringToAddresses(i.Addresses),
-		FromBlock: block,
-		ToBlock:   nil,
-	}
-
-	oldLogs, err := client.FilterLogs(context.Background(), filterQuery)
-	if err != nil {
-		return errors.Wrap(err, "failed to filter logs")
-	}
-
-	for _, log := range oldLogs {
-		i.log.WithFields(map[string]interface{}{"block": log.BlockNumber, "address": log.Address.Hex()}).Debugf("processing past event")
-
-		err = i.handleLogs(log, client)
+		err := logHandler(i, ctx, log, client)
 		if err != nil {
 			return errors.Wrap(err, "failed to handle log")
 		}
-
-		block = big.NewInt(int64(log.BlockNumber))
 	}
 
-	i.log.WithFields(map[string]interface{}{"block": block.String(), "addresses": i.Addresses}).Debugf("finish processing past events")
 	return nil
 }
 
-func (i *Indexer) subscribeAndProcessNewEvents(client *ethclient.Client) error {
-	query := ethereum.FilterQuery{
-		Addresses: helpers.ConvertStringToAddresses(i.Addresses),
+func (i *indexer) processPastEvents(ctx context.Context, client *ethclient.Client) error {
+	i.log.WithField("addresses", i.Addresses).Debugf("start processing past events")
+
+	for k := 0; k < len(i.Addresses); k++ {
+		filterQuery := ethereum.FilterQuery{
+			Addresses: []common.Address{common.HexToAddress(i.Addresses[k])},
+			FromBlock: big.NewInt(i.Blocks[i.Addresses[k]] + 1),
+			ToBlock:   nil,
+		}
+
+		oldLogs, err := client.FilterLogs(ctx, filterQuery)
+		if err != nil {
+			return errors.Wrap(err, "failed to filter logs")
+		}
+
+		for _, log := range oldLogs {
+			i.log.WithFields(map[string]interface{}{"block": log.BlockNumber, "address": log.Address.Hex()}).Debugf("processing past event")
+
+			err = i.handleLogs(ctx, log, client)
+			if err != nil {
+				return errors.Wrap(err, "failed to handle log")
+			}
+
+			i.Blocks[log.Address.Hex()] = int64(log.BlockNumber)
+		}
+	}
+
+	i.log.WithField("addresses", i.Addresses).Debugf("finish processing past events")
+	return nil
+}
+
+func (i *indexer) subscribeAndProcessNewEvents(ctx context.Context, client *ethclient.Client) error {
+	i.log.WithField("addresses", i.Addresses).Debugf("subscribing to new events")
+
+	addresses, err := convertStringsToAddresses(i.Addresses)
+	if err != nil {
+		return errors.Wrap(err, "failed to convert strings to addresses")
 	}
 
 	logs := make(chan types.Log)
 
-	subscription, err := client.SubscribeFilterLogs(context.Background(), query, logs)
+	subscription, err := client.SubscribeFilterLogs(
+		ctx,
+		ethereum.FilterQuery{
+			Addresses: addresses,
+		},
+		logs,
+	)
 	if err != nil {
 		return errors.Wrap(err, "failed to subscribe to logs")
 	}
@@ -154,9 +124,26 @@ func (i *Indexer) subscribeAndProcessNewEvents(client *ethclient.Client) error {
 		case err = <-subscription.Err():
 			return errors.Wrap(err, "some error with subscription")
 		case vLog := <-logs:
-			if err = i.handleLogs(vLog, client); err != nil {
+			if err = i.handleLogs(ctx, vLog, client); err != nil {
 				return errors.Wrap(err, "failed to handle log")
 			}
+		case address := <-i.issuerCh:
+			i.Addresses = append(i.Addresses, address)
+			subscription.Unsubscribe()
+			return i.listen(ctx)
 		}
 	}
+}
+
+func convertStringsToAddresses(addrs []string) ([]common.Address, error) {
+	addresses := make([]common.Address, 0)
+
+	for i := range addrs {
+		if !common.IsHexAddress(addrs[i]) {
+			return nil, data.ErrInvalidEthAddress
+		}
+		addresses = append(addresses, common.HexToAddress(addrs[i]))
+	}
+
+	return addresses, nil
 }

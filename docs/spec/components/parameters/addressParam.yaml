@@ -1,0 +1,8 @@
+in: query
+name: 'filter[address]'
+required: true
+schema:
+  type: string
+  description: >-
+    Ethereum address for required user.
+  example: "0x6Ac7bC6c7BeEC5693c08734729Ed15fbc23D98c7"

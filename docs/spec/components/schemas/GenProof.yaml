@@ -1,0 +1,21 @@
+allOf:
+  - $ref: "#/components/schemas/SMTProofKey"
+  - type: object
+    x-go-is-request: true
+    required:
+      - attributes
+    properties:
+      attributes:
+        type: object
+        required:
+          - node_key
+          - contract
+        properties:
+          node_key:
+            type: string
+            description: key hex string for node for which proof would be generated
+            example: "0x52749da41b7196a7001d85ce38fa794fe0f9044e"
+          contract:
+            type: string
+            description: contract address to retrieve sparse merkle tree
+            example: "0x6Ac7bC6c7BeEC5693c08734729Ed15fbc23D98c7"
