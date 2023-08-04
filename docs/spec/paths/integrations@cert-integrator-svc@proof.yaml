@@ -1,0 +1,32 @@
+post:
+  tags:
+    - SMT
+  summary: Generate new proof
+  operationId: GenerateSMTProof
+  description: Endpoint for generating new proof from sparse merkle tree (that would be retrieved from contract address)
+    for specified key.
+  requestBody:
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - data
+          properties:
+            data:
+              $ref: "#/components/schemas/GenProof"
+  responses:
+    '200':
+      description: Success
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: object
+                $ref: '#/components/schemas/SMTProof'
+    '400':
+      description: Bad request.
+    '500':
+      description: Internal server error.

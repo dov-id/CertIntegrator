@@ -14,9 +14,10 @@ type Config interface {
 	types.Copuser
 	comfig.Listenerer
 
-	Infura() *InfuraCfg
-	CertificatesIssuer() *CertificatesCfg
-	CertificatesFabric() *CertificatesCfg
+	Timeouts() *TimeoutsCfg
+	Networks() *NetworksCfg
+	CertificatesIssuer() *ContractsCfg
+	CertificatesFabric() *ContractsCfg
 }
 
 type config struct {
@@ -26,7 +27,8 @@ type config struct {
 	comfig.Listenerer
 	getter kv.Getter
 
-	infura             comfig.Once
+	networks           comfig.Once
+	timeouts           comfig.Once
 	certificatesIssuer comfig.Once
 	certificatesFabric comfig.Once
 }

@@ -1,0 +1,25 @@
+get:
+  tags:
+    - Public Key
+  summary: Retrieve public key
+  operationId: GetPublicKey
+  description: Endpoint for retrieving user's public key from their Ethereum address.
+  parameters:
+    - $ref: '#/components/parameters/addressParam'
+  responses:
+    '200':
+      description: Success
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: object
+                $ref: '#/components/schemas/User'
+    '400':
+      description: Bad request.
+    '404':
+      description: Not found.
+    '500':
+      description: Internal server error.

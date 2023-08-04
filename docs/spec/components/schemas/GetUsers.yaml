@@ -1,0 +1,24 @@
+allOf:
+  - $ref: "#/components/schemas/UserKey"
+  - type: object
+    x-go-is-request: true
+    required:
+      - attributes
+    properties:
+      attributes:
+        type: object
+        required:
+          - course
+          - ids
+        properties:
+          course:
+            type: string
+            description: course address to get users
+            example: "0x6Ac7bC6c7BeEC5693c08734729Ed15fbc23D98c7"
+          ids:
+            description: ids of users to get
+            type: array
+            items:
+              type: integer
+              format: int64
+            example: [1,3,10]

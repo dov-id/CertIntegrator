@@ -1,5 +1,5 @@
 {
-  "name": "CertIntegrator",
+  "name": "cert-integrator-svc",
   "version": "1.0.0",
   "dependencies": {
     "@tokend/redoc-cli": "^0.9.9",
@@ -10,7 +10,7 @@
     "start": "swagger-repo serve",
     "build": "swagger-repo build -o web_deploy",
     "test": "swagger-repo validate",
-    "release-build": "npm run build && redoc-cli bundle ./web_deploy/openapi.yaml  -o ../public/index.html -t ./web/index.hbs --options.theme.typography.links.color=#695de4",
+    "release-build": "npm run build && redoc-cli bundle ./web_deploy/openapi.yaml  -o ../public/cert-integrator-svc.html -t ./web/index.hbs --options.theme.typography.links.color=#695de4",
     "gh-pages": "swagger-repo gh-pages"
   }
 }

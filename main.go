@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/dov-id/CertIntegrator/internal/cli"
+	"github.com/dov-id/cert-integrator-svc/internal/cli"
 )
 
 func main() {

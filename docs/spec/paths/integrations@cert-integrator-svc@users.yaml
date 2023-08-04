@@ -1,0 +1,32 @@
+post:
+  tags:
+    - Users
+  summary: Retrieve users
+  operationId: GetUsers
+  description: Endpoint for retrieving user's by course address.
+  requestBody:
+    content:
+      application/json:
+        schema:
+          type: object
+          required:
+            - data
+          properties:
+            data:
+              $ref: "#/components/schemas/GetUsers"
+  responses:
+    '200':
+      description: Success
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+    '400':
+      description: Bad request.
+    '500':
+      description: Internal server error.

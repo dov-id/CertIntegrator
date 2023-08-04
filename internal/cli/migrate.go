@@ -1,8 +1,8 @@
 package cli
 
 import (
-	"github.com/dov-id/CertIntegrator/internal/assets"
-	"github.com/dov-id/CertIntegrator/internal/config"
+	"github.com/dov-id/cert-integrator-svc/internal/assets"
+	"github.com/dov-id/cert-integrator-svc/internal/config"
 	migrate "github.com/rubenv/sql-migrate"
 	"gitlab.com/distributed_lab/logan/v3/errors"
 )

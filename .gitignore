@@ -1,7 +1,9 @@
 .vscode/
 .idea/
-config.*.yaml
+config.*dev.yaml
 docs/node_modules
 docs/web_deploy
+contracts/abi/
 docker-compose.yml
-./CertIntegrator
+cert-integrator-svc
+/public

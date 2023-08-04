@@ -6,21 +6,42 @@ db:
   url: db_url
 
 certificates_issuer:
-  address: contract_addr
-  from_block: 123
-  contracts_list:
-    - first
-    - second
+  list:
+    - address: contract_address
+      name: contract_name
+      from_block: block_to_start_from
 
 certificates_fabric:
-  address: contract_addr
-  from_block: 123
-  contracts_list:
-    - first
-    - second
+  list:
+    - address: contract_address
+      name: contract_name
+      from_block: block_to_start_from
 
-infura:
-  key: d098792d2f664c3fa63db5d025fbcb3e
+networks:
+  list:
+    - name: ethereum
+      rpc_provider_ws_url: wss://...
+      block_explorer_api_url: https://...
+      block_explorer_api_key: api_key
+      cert_integrator_address: contract_address
+      wallet_private_key: private_key
+    - name: polygon
+      rpc_provider_ws_url: wss://...
+      block_explorer_api_url: https://...
+      block_explorer_api_key: api_key
+      cert_integrator_address: contract_address
+      wallet_private_key: private_key
+    - name: q
+      rpc_provider_ws_url: wss://...
+      block_explorer_api_url: https://...
+      block_explorer_api_key: api_key
+      cert_integrator_address: contract_address
+      wallet_private_key: private_key
+
+timeouts:
+  indexer: 30s
+  sender:  30s
+  cleaner: 30s
 
 listener:
   addr: :8000
@@ -29,5 +50,5 @@ cop:
   disabled: true
   endpoint: "http://..."
   upstream: "http://..."
-  service_name: CertIntegrator
+  service_name: cert-integrator-svc
   service_port: 80

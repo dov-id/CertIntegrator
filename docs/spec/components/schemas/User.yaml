@@ -1,0 +1,20 @@
+allOf:
+  - $ref: "#/components/schemas/UserKey"
+  - type: object
+    required:
+      - attributes
+    properties:
+      attributes:
+        type: object
+        required:
+          - address
+          - public_key
+        properties:
+          address:
+            type: string
+            description: user's address
+            example: "0x6Ac7bC6c7BeEC5693c08734729Ed15fbc23D98c7"
+          public_key:
+            type: string
+            description: user's public key
+            example: "0xf2aa3386c6f5cc99a5927f56ed423093600b8851bfa2700571df255be6c011e9"

@@ -1,0 +1,33 @@
+allOf:
+  - $ref: "#/components/schemas/SMTProofKey"
+  - type: object
+    required:
+      - attributes
+    properties:
+      attributes:
+        type: object
+        required:
+          - root
+          - node_key
+          - node_value
+          - proof
+        properties:
+          root:
+            type: string
+            description: smt root in hex string format
+            example: "0x1593f1d801d4196c09f466119c62ab8012edf3d9a6ca7345defb6d8607061709"
+          node_key:
+            type: string
+            description: key hex string for node for which proof was generated
+            example: "0x00000000000000000000000052749da41b7196a7001d85ce38fa794fe0f9044e"
+          node_value:
+            type: string
+            description: value hex string for node for which proof was generated
+            example: "0x0000000000000000000000000000000000000000000000000000000000000002"
+          proof:
+            type: array
+            example: ["0x212aa7bcc2bb05ce87b473e078e9c949d56d6a720d14a7a28fe00e9e26d831d4", "0x15fe426825eee5fbb0b4f80e24a5a7742115c44ac909684ae21de6b1de3351d2"]
+            description: proof itself generated for specified key
+            items:
+              type: string
+
