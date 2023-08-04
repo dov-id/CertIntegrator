@@ -7,10 +7,15 @@ allOf:
       attributes:
         type: object
         required:
+          - root
           - node_key
           - node_value
           - proof
         properties:
+          root:
+            type: string
+            description: smt root in hex string format
+            example: "0x00000000000000000000000052749da41b7196a7001d85ce38fa794fe0f9044e"
           node_key:
             type: string
             description: key hex string for node for which proof was generated

@@ -6,7 +6,7 @@ import (
 	"github.com/dov-id/cert-integrator-svc/resources"
 )
 
-func newSMTProof(id int64, key, value string, proof []string) resources.SmtProof {
+func newSMTProof(id int64, root, key, value string, proof []string) resources.SmtProof {
 	return resources.SmtProof{
 		Key: resources.NewKeyInt64(id, resources.SMT_PROOF),
 		Attributes: resources.SmtProofAttributes{
@@ -17,8 +17,8 @@ func newSMTProof(id int64, key, value string, proof []string) resources.SmtProof
 	}
 }
 
-func NewSMTProofResponse(id int64, key, value string, proof []string) resources.SmtProofResponse {
+func NewSMTProofResponse(id int64, root, key, value string, proof []string) resources.SmtProofResponse {
 	return resources.SmtProofResponse{
-		Data: newSMTProof(id, key, value, proof),
+		Data: newSMTProof(id, root, key, value, proof),
 	}
 }

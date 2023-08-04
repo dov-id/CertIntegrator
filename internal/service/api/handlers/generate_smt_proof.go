@@ -80,5 +80,14 @@ func GenerateSMTProof(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ape.Render(w, responses.NewSMTProofResponse(int64(contract.Id), keyHash.Hex(), valueHash.Hex(), hexProof))
+	ape.Render(
+		w,
+		responses.NewSMTProofResponse(
+			int64(contract.Id),
+			mTree.Root().Hex(),
+			keyHash.Hex(),
+			valueHash.Hex(),
+			hexProof,
+		),
+	)
 }

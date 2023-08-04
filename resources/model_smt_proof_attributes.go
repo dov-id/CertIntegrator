@@ -11,4 +11,6 @@ type SmtProofAttributes struct {
 	NodeValue string `json:"node_value"`
 	// proof itself generated for specified key
 	Proof []string `json:"proof"`
+	// smt root in hex string format
+	Root string `json:"root"`
 }
