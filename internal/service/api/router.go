@@ -24,7 +24,6 @@ func (s *Router) router() chi.Router {
 		r.Post("/proof", handlers.GenerateSMTProof)
 
 		r.Get("/courses", handlers.GetCourses)
-		r.Get("/public_key", handlers.GetPublicKey)
 
 		r.Route("/users", func(r chi.Router) {
 			r.Post("/", handlers.GetUsers)

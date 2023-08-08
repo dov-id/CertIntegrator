@@ -16,7 +16,6 @@ CREATE INDEX IF NOT EXISTS contracts_address_idx ON contracts(address);
 CREATE TABLE IF NOT EXISTS users (
     address     TEXT   NOT NULL,
     contract_id BIGINT NOT NULL,
-    public_key  TEXT   NOT NULL,
 
     UNIQUE (address, contract_id),
 

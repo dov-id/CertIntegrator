@@ -2,7 +2,6 @@ package postgres
 
 import (
 	"database/sql"
-	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/dov-id/cert-integrator-svc/internal/data"
@@ -55,15 +54,11 @@ func (q UsersQ) Select() ([]data.User, error) {
 	return result, q.db.Select(&result, q.selectBuilder)
 }
 
-func (q UsersQ) Upsert(user data.User) error {
-	updateStmt, args := sq.Update(" ").
-		Set("public_key", user.PublicKey).
-		MustSql()
-
+func (q UsersQ) Insert(user data.User) error {
 	return q.db.Exec(
 		sq.Insert(usersTableName).
 			SetMap(structs.Map(user)).
-			Suffix(fmt.Sprintf("ON CONFLICT (address, contract_id) DO %s", updateStmt), args...),
+			Suffix("ON CONFLICT (address, contract_id) DO NOTHING"),
 	)
 }
 

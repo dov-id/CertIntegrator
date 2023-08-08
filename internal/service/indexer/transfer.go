@@ -7,7 +7,6 @@ import (
 	"github.com/dov-id/cert-integrator-svc/contracts"
 	"github.com/dov-id/cert-integrator-svc/internal/data"
 	"github.com/dov-id/cert-integrator-svc/internal/data/postgres"
-	"github.com/dov-id/cert-integrator-svc/internal/helpers"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/iden3/go-merkletree-sql/v2"
@@ -51,8 +50,16 @@ func (i *indexer) handleIssuerTransferLog(ctx context.Context, eventLog types.Lo
 		return errors.Wrap(err, "failed to create merkle tree")
 	}
 
+	err = i.MasterQ.UsersQ().Insert(data.User{
+		Address:    event.To.Hex(),
+		ContractId: contract.Id,
+	})
+	if err != nil {
+		return errors.Wrap(err, "failed to insert user")
+	}
+
 	if event.From.Hex() == ZeroAddress {
-		err = i.handleMint(ctx, mTree, event, int64(event.Raw.BlockNumber), int64(contract.Id))
+		err = i.handleMint(ctx, mTree, event, int64(event.Raw.BlockNumber))
 		if err != nil {
 			return errors.Wrap(err, "failed to handle mint event")
 		}
@@ -103,21 +110,8 @@ func (i *indexer) handleMint(
 	mTree *merkletree.MerkleTree,
 	event *contracts.TokenContractTransfer,
 	blockNumber int64,
-	contractId int64,
 ) error {
 	receiver := event.To.Big()
-
-	err := helpers.ProcessPublicKey(helpers.ProcessPubKeyParams{
-		Ctx:        ctx,
-		Cfg:        i.cfg,
-		Address:    event.To,
-		ContractId: uint64(contractId),
-		UsersQ:     i.MasterQ.UsersQ(),
-		Clients:    i.Clients,
-	})
-	if err != nil && !pkgErrors.Is(err, data.ErrNoPublicKey) {
-		return errors.Wrap(err, "failed to process public key")
-	}
 
 	_, leafValue, _, err := mTree.Get(ctx, receiver)
 	if err != nil && !pkgErrors.Is(err, merkletree.ErrKeyNotFound) {
