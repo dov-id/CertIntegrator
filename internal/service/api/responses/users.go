@@ -33,8 +33,7 @@ func newUser(user data.User) resources.User {
 			Type: resources.USER,
 		},
 		Attributes: resources.UserAttributes{
-			Address:   user.Address,
-			PublicKey: user.PublicKey,
+			Address: user.Address,
 		},
 	}
 }

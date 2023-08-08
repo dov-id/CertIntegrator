@@ -21,20 +21,14 @@ networks:
   list:
     - name: ethereum
       rpc_provider_ws_url: wss://...
-      block_explorer_api_url: https://...
-      block_explorer_api_key: api_key
       cert_integrator_address: contract_address
       wallet_private_key: private_key
     - name: polygon
       rpc_provider_ws_url: wss://...
-      block_explorer_api_url: https://...
-      block_explorer_api_key: api_key
       cert_integrator_address: contract_address
       wallet_private_key: private_key
     - name: q
       rpc_provider_ws_url: wss://...
-      block_explorer_api_url: https://...
-      block_explorer_api_key: api_key
       cert_integrator_address: contract_address
       wallet_private_key: private_key
 

@@ -54,8 +54,6 @@ var NetworkHooks = figure.Hooks{
 		type network struct {
 			Name                  string `fig:"name,required"`
 			RpcProviderWsUrl      string `fig:"rpc_provider_ws_url,required"`
-			BlockExplorerApiUrl   string `fig:"block_explorer_api_url,required"`
-			BlockExplorerApiKey   string `fig:"block_explorer_api_key,required"`
 			CertIntegratorAddress string `fig:"cert_integrator_address,required"`
 			WalletPrivateKey      string `fig:"wallet_private_key,required"`
 		}
@@ -106,8 +104,6 @@ var NetworkHooks = figure.Hooks{
 
 					cfg.Networks[data.Network(info.Name)] = Network{
 						RpcProviderWsUrl:      info.RpcProviderWsUrl,
-						BlockExplorerApiUrl:   info.BlockExplorerApiUrl,
-						BlockExplorerApiKey:   info.BlockExplorerApiKey,
 						CertIntegratorAddress: common.HexToAddress(info.CertIntegratorAddress),
 						WalletCfg: &WalletCfg{
 							PrivateKey: privateKey,
